@@ -1,51 +1,15 @@
 {
-  "generated_at": "2026-03-01T00:00:00Z",
-  "focus": "system-ops",
+  "focus": "sync-test",
   "items": [
     {
-      "id": "OPS-001",
-      "title": "Operations-Cockpit etablieren",
+      "id": "OPS-X",
+      "title": "Test",
       "owner": "Nana",
       "priority": "P1",
       "status": "in_progress",
-      "next_step": "Cockpit-Struktur + Status-Ampel live halten",
-      "blocker": "Kein zentrales Live-Update aus allen Agenten"
-    },
-    {
-      "id": "OPS-002",
-      "title": "Monitoring-Standard für Long-Running Jobs",
-      "owner": "Nana",
-      "priority": "P1",
-      "status": "todo",
-      "next_step": "Einheitliche Healthchecks + Restart-Regeln definieren",
-      "blocker": "Noch keine globale Konvention je Jobtyp"
-    },
-    {
-      "id": "OPS-003",
-      "title": "Agenten-Rollen als 1-Page Playbook",
-      "owner": "Nana",
-      "priority": "P2",
-      "status": "todo",
-      "next_step": "Routing-Karte Nana/Kari/Kate/Samantha finalisieren",
-      "blocker": "Abnahme der Eskalationsregeln"
-    },
-    {
-      "id": "OPS-004",
-      "title": "Nacharbeit entfernte Gruppen (96/192)",
-      "owner": "Kari",
-      "priority": "P1",
-      "status": "todo",
-      "next_step": "Group_IDs extrahieren und Nacharbeits-Queue erstellen",
-      "blocker": "Startfreigabe"
-    },
-    {
-      "id": "OPS-005",
-      "title": "Datei-Reparaturen file_25-27,29-33",
-      "owner": "Kate",
-      "priority": "P1",
-      "status": "todo",
-      "next_step": "Strukturprüfung + Parent/Variant-Reparatur",
-      "blocker": "Priorisierter Laufplan fehlt"
+      "next_step": "ok",
+      "blocker": "none"
     }
-  ]
+  ],
+  "generated_at": "2026-03-01T22:46:43.216Z"
 }

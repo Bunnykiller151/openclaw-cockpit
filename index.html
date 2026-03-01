@@ -12,36 +12,46 @@
     .card{background:#121a33;border:1px solid #24305e;border-radius:14px;padding:14px}
     .meta{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
     .pill{padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #3a4a84}
-    .P1{border-color:#ff8a8a;color:#ffb3b3}.P2{border-color:#ffd28a;color:#ffe2b8}
+    .P1{border-color:#ff8a8a;color:#ffb3b3}.P2{border-color:#ffd28a;color:#ffe2b8}.P3{border-color:#8ad1ff;color:#bce8ff}
     .todo{background:#3a2430}.in_progress{background:#20304d}.done{background:#1c3f2e}
-    code{background:#0a1328;padding:1px 6px;border-radius:6px}
+    .tiny{font-size:12px;opacity:.75}
   </style>
 </head>
 <body>
   <h1>⚡ OpenClaw Cockpit</h1>
   <div class="sub">Fokus: Aufräumen, Stabilität, Reparaturen · <span id="ts">lädt…</span></div>
+  <div class="tiny">Auto-Refresh: alle 20 Sekunden</div>
   <div id="grid" class="grid"></div>
 
   <script>
     const statusLabel = s => ({todo:'TODO',in_progress:'IN PROGRESS',done:'DONE'}[s] || s);
-    fetch('./data.json').then(r=>r.json()).then(data=>{
-      document.getElementById('ts').textContent = `Stand: ${data.generated_at}`;
-      const grid = document.getElementById('grid');
-      grid.innerHTML = data.items.map(it => `
-        <article class="card">
-          <h3>${it.id} · ${it.title}</h3>
-          <div class="meta">
-            <span class="pill ${it.priority}">${it.priority}</span>
-            <span class="pill ${it.status}">${statusLabel(it.status)}</span>
-            <span class="pill">Owner: ${it.owner}</span>
-          </div>
-          <p><strong>Nächster Schritt:</strong> ${it.next_step}</p>
-          <p><strong>Blocker:</strong> ${it.blocker}</p>
-        </article>
-      `).join('');
-    }).catch(err=>{
-      document.getElementById('grid').innerHTML = `<pre>Fehler beim Laden: ${err}</pre>`;
-    });
+
+    async function render() {
+      try {
+        const res = await fetch('./data.json?_=' + Date.now(), { cache: 'no-store' });
+        const data = await res.json();
+        document.getElementById('ts').textContent = `Stand: ${data.generated_at || 'n/a'}`;
+
+        const grid = document.getElementById('grid');
+        grid.innerHTML = (data.items || []).map(it => `
+          <article class="card">
+            <h3>${it.id || '-'} · ${it.title || 'Ohne Titel'}</h3>
+            <div class="meta">
+              <span class="pill ${it.priority || ''}">${it.priority || '-'}</span>
+              <span class="pill ${it.status || ''}">${statusLabel(it.status || '-')}</span>
+              <span class="pill">Owner: ${it.owner || '-'}</span>
+            </div>
+            <p><strong>Nächster Schritt:</strong> ${it.next_step || '-'}</p>
+            <p><strong>Blocker:</strong> ${it.blocker || '-'}</p>
+          </article>
+        `).join('');
+      } catch (err) {
+        document.getElementById('grid').innerHTML = `<pre>Fehler beim Laden: ${err}</pre>`;
+      }
+    }
+
+    render();
+    setInterval(render, 20000);
   </script>
 </body>
 </html>
