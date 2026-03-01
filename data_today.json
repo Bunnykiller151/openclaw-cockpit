@@ -1,6 +1,13 @@
 {
   "generated_at": "2026-03-01T23:50:00.000Z",
   "focus": "today",
+  "agents": [
+    { "id": "nana", "name": "Nana", "role": "Orchestrator", "status": "online", "portrait": "./avatars_nana.svg" },
+    { "id": "kari", "name": "Kari", "role": "Shopify Clerk", "status": "busy", "portrait": "./avatars_kari.svg" },
+    { "id": "kate", "name": "Kate", "role": "Data Analyst", "status": "online", "portrait": "./avatars_kate.svg" },
+    { "id": "samantha", "name": "Samantha", "role": "API Executor", "status": "idle", "portrait": "./avatars_samantha.svg" },
+    { "id": "theresa", "name": "Theresa", "role": "Browser Research", "status": "idle", "portrait": "./avatars_theresa.svg" }
+  ],
   "items": [
     {
       "id": "TODAY-01",

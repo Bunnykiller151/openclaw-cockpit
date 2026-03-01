@@ -41,11 +41,38 @@ function getBoardFromUrl(rawUrl) {
   return boardFiles[b] ? b : 'strategy';
 }
 
+function readBoard(board) {
+  const targetPath = boardFiles[board] || boardFiles.strategy;
+  if (!fs.existsSync(targetPath)) {
+    return { focus: board, generated_at: new Date().toISOString(), agents: [], items: [] };
+  }
+  return JSON.parse(fs.readFileSync(targetPath, 'utf-8'));
+}
+
+function writeBoard(board, payload) {
+  const targetPath = boardFiles[board] || boardFiles.strategy;
+  fs.writeFileSync(targetPath, JSON.stringify(payload, null, 2), 'utf-8');
+}
+
+function requireApiKey(req, res) {
+  if (!apiKey) {
+    sendJson(res, 500, { ok: false, error: 'COCKPIT_API_KEY is not set on server' });
+    return false;
+  }
+  const incomingKey = req.headers['x-api-key'];
+  if (!incomingKey || incomingKey !== apiKey) {
+    sendJson(res, 401, { ok: false, error: 'Unauthorized' });
+    return false;
+  }
+  return true;
+}
+
 const mime = {
   '.html': 'text/html; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8'
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml'
 };
 
 http.createServer(async (req, res) => {
@@ -57,24 +84,65 @@ http.createServer(async (req, res) => {
     return sendJson(res, 200, { ok: true, service: 'openclaw-cockpit' });
   }
 
+  // Full board replace
   if (method === 'POST' && (pathname === '/api/update' || pathname === '/openclaw/cockpit/api/update')) {
-    if (!apiKey) return sendJson(res, 500, { ok: false, error: 'COCKPIT_API_KEY is not set on server' });
-
-    const incomingKey = req.headers['x-api-key'];
-    if (!incomingKey || incomingKey !== apiKey) return sendJson(res, 401, { ok: false, error: 'Unauthorized' });
-
+    if (!requireApiKey(req, res)) return;
     try {
       const board = getBoardFromUrl(rawUrl);
-      const targetPath = boardFiles[board];
       const payload = JSON.parse(await readBody(req));
-
       if (!payload || typeof payload !== 'object' || !Array.isArray(payload.items)) {
         return sendJson(res, 400, { ok: false, error: 'Invalid payload: expected object with items[]' });
       }
-
-      const normalized = { ...payload, focus: board, generated_at: new Date().toISOString() };
-      fs.writeFileSync(targetPath, JSON.stringify(normalized, null, 2), 'utf-8');
+      const normalized = {
+        ...payload,
+        focus: board,
+        agents: Array.isArray(payload.agents) ? payload.agents : [],
+        generated_at: new Date().toISOString()
+      };
+      writeBoard(board, normalized);
       return sendJson(res, 200, { ok: true, updated: true, board, generated_at: normalized.generated_at });
+    } catch (err) {
+      return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
+    }
+  }
+
+  // Partial item update (single card)
+  const itemMatch = pathname.match(/^\/(?:openclaw\/cockpit\/)?api\/item\/([^/]+)$/);
+  if (method === 'PATCH' && itemMatch) {
+    if (!requireApiKey(req, res)) return;
+    try {
+      const board = getBoardFromUrl(rawUrl);
+      const itemId = decodeURIComponent(itemMatch[1]);
+      const patch = JSON.parse(await readBody(req));
+      const data = readBoard(board);
+      const idx = (data.items || []).findIndex(i => i.id === itemId);
+      if (idx === -1) return sendJson(res, 404, { ok: false, error: `Item ${itemId} not found`, board });
+
+      data.items[idx] = { ...data.items[idx], ...patch };
+      data.generated_at = new Date().toISOString();
+      writeBoard(board, data);
+      return sendJson(res, 200, { ok: true, updated: true, board, item: data.items[idx] });
+    } catch (err) {
+      return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
+    }
+  }
+
+  // Partial agent status update
+  const agentMatch = pathname.match(/^\/(?:openclaw\/cockpit\/)?api\/agent\/([^/]+)$/);
+  if (method === 'PATCH' && agentMatch) {
+    if (!requireApiKey(req, res)) return;
+    try {
+      const board = getBoardFromUrl(rawUrl);
+      const agentId = decodeURIComponent(agentMatch[1]);
+      const patch = JSON.parse(await readBody(req));
+      const data = readBoard(board);
+      const idx = (data.agents || []).findIndex(a => a.id === agentId);
+      if (idx === -1) return sendJson(res, 404, { ok: false, error: `Agent ${agentId} not found`, board });
+
+      data.agents[idx] = { ...data.agents[idx], ...patch };
+      data.generated_at = new Date().toISOString();
+      writeBoard(board, data);
+      return sendJson(res, 200, { ok: true, updated: true, board, agent: data.agents[idx] });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
     }
