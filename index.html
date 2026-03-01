@@ -7,7 +7,10 @@
   <style>
     body{font-family:Inter,system-ui,Arial,sans-serif;background:#0b1020;color:#e8ecff;margin:0;padding:24px}
     h1{margin:0 0 8px;font-size:28px}
-    .sub{opacity:.8;margin-bottom:20px}
+    .sub{opacity:.8;margin-bottom:12px}
+    .controls{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+    .btn{cursor:pointer;border:1px solid #3a4a84;background:#121a33;color:#e8ecff;padding:8px 12px;border-radius:10px}
+    .btn.active{background:#24407a;border-color:#6ea0ff}
     .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
     .card{background:#121a33;border:1px solid #24305e;border-radius:14px;padding:14px}
     .meta{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
@@ -19,16 +22,34 @@
 </head>
 <body>
   <h1>⚡ OpenClaw Cockpit</h1>
-  <div class="sub">Fokus: Aufräumen, Stabilität, Reparaturen · <span id="ts">lädt…</span></div>
+  <div class="sub"><span id="focusLabel">Board</span> · <span id="ts">lädt…</span></div>
+
+  <div class="controls">
+    <button id="btn-strategy" class="btn">Strategy</button>
+    <button id="btn-today" class="btn">Today</button>
+  </div>
+
   <div class="tiny">Auto-Refresh: alle 20 Sekunden</div>
   <div id="grid" class="grid"></div>
 
   <script>
     const statusLabel = s => ({todo:'TODO',in_progress:'IN PROGRESS',done:'DONE'}[s] || s);
+    let board = localStorage.getItem('cockpit_board') || 'strategy';
+
+    function boardFile(name){
+      if(name === 'today') return './data_today.json';
+      return './data_strategy.json';
+    }
+
+    function updateButtons(){
+      document.getElementById('btn-strategy').classList.toggle('active', board === 'strategy');
+      document.getElementById('btn-today').classList.toggle('active', board === 'today');
+      document.getElementById('focusLabel').textContent = `Board: ${board}`;
+    }
 
     async function render() {
       try {
-        const res = await fetch('./data.json?_=' + Date.now(), { cache: 'no-store' });
+        const res = await fetch(boardFile(board) + '?_=' + Date.now(), { cache: 'no-store' });
         const data = await res.json();
         document.getElementById('ts').textContent = `Stand: ${data.generated_at || 'n/a'}`;
 
@@ -50,6 +71,21 @@
       }
     }
 
+    document.getElementById('btn-strategy').addEventListener('click', () => {
+      board = 'strategy';
+      localStorage.setItem('cockpit_board', board);
+      updateButtons();
+      render();
+    });
+
+    document.getElementById('btn-today').addEventListener('click', () => {
+      board = 'today';
+      localStorage.setItem('cockpit_board', board);
+      updateButtons();
+      render();
+    });
+
+    updateButtons();
     render();
     setInterval(render, 20000);
   </script>

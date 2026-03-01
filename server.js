@@ -3,9 +3,13 @@ const fs = require('fs');
 const path = require('path');
 
 const baseDir = __dirname;
-const dataPath = path.join(baseDir, 'data.json');
 const port = process.env.PORT || 3000;
 const apiKey = process.env.COCKPIT_API_KEY || '';
+
+const boardFiles = {
+  strategy: path.join(baseDir, 'data_strategy.json'),
+  today: path.join(baseDir, 'data_today.json')
+};
 
 function send(res, code, content, type = 'text/plain') {
   res.writeHead(code, { 'Content-Type': type });
@@ -31,6 +35,12 @@ function readBody(req) {
   });
 }
 
+function getBoardFromUrl(rawUrl) {
+  const u = new URL(rawUrl, 'http://localhost');
+  const b = (u.searchParams.get('board') || 'strategy').toLowerCase();
+  return boardFiles[b] ? b : 'strategy';
+}
+
 const mime = {
   '.html': 'text/html; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
@@ -40,52 +50,41 @@ const mime = {
 
 http.createServer(async (req, res) => {
   const method = req.method || 'GET';
-  const rawUrl = (req.url || '/').split('?')[0];
+  const rawUrl = req.url || '/';
+  const pathname = rawUrl.split('?')[0];
 
-  // Health endpoint
-  if (method === 'GET' && (rawUrl === '/health' || rawUrl === '/openclaw/cockpit/health')) {
+  if (method === 'GET' && (pathname === '/health' || pathname === '/openclaw/cockpit/health')) {
     return sendJson(res, 200, { ok: true, service: 'openclaw-cockpit' });
   }
 
-  // API update endpoint
-  if (method === 'POST' && (rawUrl === '/api/update' || rawUrl === '/openclaw/cockpit/api/update')) {
-    if (!apiKey) {
-      return sendJson(res, 500, { ok: false, error: 'COCKPIT_API_KEY is not set on server' });
-    }
+  if (method === 'POST' && (pathname === '/api/update' || pathname === '/openclaw/cockpit/api/update')) {
+    if (!apiKey) return sendJson(res, 500, { ok: false, error: 'COCKPIT_API_KEY is not set on server' });
 
     const incomingKey = req.headers['x-api-key'];
-    if (!incomingKey || incomingKey !== apiKey) {
-      return sendJson(res, 401, { ok: false, error: 'Unauthorized' });
-    }
+    if (!incomingKey || incomingKey !== apiKey) return sendJson(res, 401, { ok: false, error: 'Unauthorized' });
 
     try {
-      const raw = await readBody(req);
-      const payload = JSON.parse(raw);
+      const board = getBoardFromUrl(rawUrl);
+      const targetPath = boardFiles[board];
+      const payload = JSON.parse(await readBody(req));
 
       if (!payload || typeof payload !== 'object' || !Array.isArray(payload.items)) {
         return sendJson(res, 400, { ok: false, error: 'Invalid payload: expected object with items[]' });
       }
 
-      const normalized = {
-        ...payload,
-        generated_at: new Date().toISOString()
-      };
-
-      fs.writeFileSync(dataPath, JSON.stringify(normalized, null, 2), 'utf-8');
-      return sendJson(res, 200, { ok: true, updated: true, generated_at: normalized.generated_at });
+      const normalized = { ...payload, focus: board, generated_at: new Date().toISOString() };
+      fs.writeFileSync(targetPath, JSON.stringify(normalized, null, 2), 'utf-8');
+      return sendJson(res, 200, { ok: true, updated: true, board, generated_at: normalized.generated_at });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
     }
   }
 
-  // Unterstützt Root und /openclaw/cockpit
-  const normalized = (
-    rawUrl === '/' ||
-    rawUrl === '/openclaw/cockpit' ||
-    rawUrl === '/openclaw/cockpit/'
-  ) ? '/index.html' : rawUrl.replace('/openclaw/cockpit', '');
+  const normalizedPath = (
+    pathname === '/' || pathname === '/openclaw/cockpit' || pathname === '/openclaw/cockpit/'
+  ) ? '/index.html' : pathname.replace('/openclaw/cockpit', '');
 
-  const filePath = path.join(baseDir, normalized);
+  const filePath = path.join(baseDir, normalizedPath);
   if (!filePath.startsWith(baseDir)) return send(res, 403, 'Forbidden');
 
   fs.readFile(filePath, (err, data) => {

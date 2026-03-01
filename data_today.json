@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-03-01T23:50:00.000Z",
+  "focus": "today",
+  "items": [
+    {
+      "id": "TODAY-01",
+      "title": "Cockpit live validieren",
+      "owner": "Nana",
+      "priority": "P1",
+      "status": "in_progress",
+      "next_step": "Health + API + UI live check durchführen",
+      "blocker": "keiner"
+    },
+    {
+      "id": "TODAY-02",
+      "title": "Monitoring-Template v1 finalisieren",
+      "owner": "Nana",
+      "priority": "P1",
+      "status": "todo",
+      "next_step": "Check-Intervall + Restart-Regel + Alert-Text definieren",
+      "blocker": "Freigabe der Grenzwerte"
+    },
+    {
+      "id": "TODAY-03",
+      "title": "Ops-README für Team",
+      "owner": "Nana",
+      "priority": "P2",
+      "status": "todo",
+      "next_step": "Kurzanleitung für Board-Update schreiben",
+      "blocker": "keiner"
+    }
+  ]
+}
