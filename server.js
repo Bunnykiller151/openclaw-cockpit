@@ -93,11 +93,13 @@ http.createServer(async (req, res) => {
       if (!payload || typeof payload !== 'object' || !Array.isArray(payload.items)) {
         return sendJson(res, 400, { ok: false, error: 'Invalid payload: expected object with items[]' });
       }
+      const now = new Date().toISOString();
       const normalized = {
         ...payload,
         focus: board,
-        agents: Array.isArray(payload.agents) ? payload.agents : [],
-        generated_at: new Date().toISOString()
+        agents: (Array.isArray(payload.agents) ? payload.agents : []).map(a => ({ ...a, updated_at: a.updated_at || now })),
+        items: (Array.isArray(payload.items) ? payload.items : []).map(i => ({ ...i, updated_at: i.updated_at || now })),
+        generated_at: now
       };
       writeBoard(board, normalized);
       return sendJson(res, 200, { ok: true, updated: true, board, generated_at: normalized.generated_at });
@@ -118,8 +120,9 @@ http.createServer(async (req, res) => {
       const idx = (data.items || []).findIndex(i => i.id === itemId);
       if (idx === -1) return sendJson(res, 404, { ok: false, error: `Item ${itemId} not found`, board });
 
-      data.items[idx] = { ...data.items[idx], ...patch };
-      data.generated_at = new Date().toISOString();
+      const now = new Date().toISOString();
+      data.items[idx] = { ...data.items[idx], ...patch, updated_at: now };
+      data.generated_at = now;
       writeBoard(board, data);
       return sendJson(res, 200, { ok: true, updated: true, board, item: data.items[idx] });
     } catch (err) {
@@ -139,8 +142,9 @@ http.createServer(async (req, res) => {
       const idx = (data.agents || []).findIndex(a => a.id === agentId);
       if (idx === -1) return sendJson(res, 404, { ok: false, error: `Agent ${agentId} not found`, board });
 
-      data.agents[idx] = { ...data.agents[idx], ...patch };
-      data.generated_at = new Date().toISOString();
+      const now = new Date().toISOString();
+      data.agents[idx] = { ...data.agents[idx], ...patch, updated_at: now };
+      data.generated_at = now;
       writeBoard(board, data);
       return sendJson(res, 200, { ok: true, updated: true, board, agent: data.agents[idx] });
     } catch (err) {

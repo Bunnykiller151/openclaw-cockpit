@@ -2,11 +2,13 @@
   "generated_at": "2026-03-01T23:42:03.181Z",
   "focus": "strategy",
   "agents": [
-    { "id": "nana", "name": "Nana", "role": "Orchestrator", "status": "online", "portrait": "./avatars_nana.svg" },
-    { "id": "kari", "name": "Kari", "role": "Shopify Clerk", "status": "busy", "portrait": "./avatars_kari.svg" },
-    { "id": "kate", "name": "Kate", "role": "Data Analyst", "status": "online", "portrait": "./avatars_kate.svg" },
-    { "id": "samantha", "name": "Samantha", "role": "API Executor", "status": "idle", "portrait": "./avatars_samantha.svg" },
-    { "id": "theresa", "name": "Theresa", "role": "Browser Research", "status": "idle", "portrait": "./avatars_theresa.svg" }
+    { "id": "nana", "name": "Nana", "role": "Orchestrator", "status": "online", "portrait": "./avatars_nana.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "kari", "name": "Kari", "role": "Shopify Clerk", "status": "busy", "portrait": "./avatars_kari.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "kate", "name": "Kate", "role": "Data Analyst", "status": "online", "portrait": "./avatars_kate.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "samantha", "name": "Samantha", "role": "API Executor", "status": "idle", "portrait": "./avatars_samantha.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "theresa", "name": "Theresa", "role": "Browser Research", "status": "idle", "portrait": "./avatars_theresa.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "marta", "name": "Marta", "role": "Support Agent", "status": "idle", "portrait": "./avatars_marta.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "cassandra", "name": "Cassandra", "role": "Processing Agent", "status": "idle", "portrait": "./avatars_cassandra.svg", "updated_at": "2026-03-01T23:42:03.181Z" }
   ],
   "items": [
     {
@@ -16,7 +18,8 @@
       "priority": "P1",
       "status": "in_progress",
       "next_step": "Tägliche Updates automatisieren (API-Write + Zeitplan)",
-      "blocker": "Noch kein fixer Update-Takt bestätigt"
+      "blocker": "Noch kein fixer Update-Takt bestätigt",
+      "updated_at": "2026-03-01T23:42:03.181Z"
     },
     {
       "id": "OPS-002",
@@ -25,7 +28,8 @@
       "priority": "P1",
       "status": "todo",
       "next_step": "Healthcheck-, Restart- und Logging-Template finalisieren",
-      "blocker": "Konvention pro Jobtyp fehlt"
+      "blocker": "Konvention pro Jobtyp fehlt",
+      "updated_at": "2026-03-01T23:42:03.181Z"
     },
     {
       "id": "OPS-003",
@@ -34,7 +38,8 @@
       "priority": "P2",
       "status": "todo",
       "next_step": "Routing-Playbook mit Eskalationsregeln veröffentlichen",
-      "blocker": "Abnahme durch John"
+      "blocker": "Abnahme durch John",
+      "updated_at": "2026-03-01T23:42:03.181Z"
     }
   ]
 }

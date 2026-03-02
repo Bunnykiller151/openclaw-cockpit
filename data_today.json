@@ -2,11 +2,13 @@
   "generated_at": "2026-03-01T23:50:00.000Z",
   "focus": "today",
   "agents": [
-    { "id": "nana", "name": "Nana", "role": "Orchestrator", "status": "online", "portrait": "./avatars_nana.svg" },
-    { "id": "kari", "name": "Kari", "role": "Shopify Clerk", "status": "busy", "portrait": "./avatars_kari.svg" },
-    { "id": "kate", "name": "Kate", "role": "Data Analyst", "status": "online", "portrait": "./avatars_kate.svg" },
-    { "id": "samantha", "name": "Samantha", "role": "API Executor", "status": "idle", "portrait": "./avatars_samantha.svg" },
-    { "id": "theresa", "name": "Theresa", "role": "Browser Research", "status": "idle", "portrait": "./avatars_theresa.svg" }
+    { "id": "nana", "name": "Nana", "role": "Orchestrator", "status": "online", "portrait": "./avatars_nana.svg", "updated_at": "2026-03-01T23:50:00.000Z" },
+    { "id": "kari", "name": "Kari", "role": "Shopify Clerk", "status": "busy", "portrait": "./avatars_kari.svg", "updated_at": "2026-03-01T23:50:00.000Z" },
+    { "id": "kate", "name": "Kate", "role": "Data Analyst", "status": "online", "portrait": "./avatars_kate.svg", "updated_at": "2026-03-01T23:50:00.000Z" },
+    { "id": "samantha", "name": "Samantha", "role": "API Executor", "status": "idle", "portrait": "./avatars_samantha.svg", "updated_at": "2026-03-01T23:50:00.000Z" },
+    { "id": "theresa", "name": "Theresa", "role": "Browser Research", "status": "idle", "portrait": "./avatars_theresa.svg", "updated_at": "2026-03-01T23:50:00.000Z" },
+    { "id": "marta", "name": "Marta", "role": "Support Agent", "status": "idle", "portrait": "./avatars_marta.svg", "updated_at": "2026-03-01T23:50:00.000Z" },
+    { "id": "cassandra", "name": "Cassandra", "role": "Processing Agent", "status": "idle", "portrait": "./avatars_cassandra.svg", "updated_at": "2026-03-01T23:50:00.000Z" }
   ],
   "items": [
     {
@@ -16,7 +18,8 @@
       "priority": "P1",
       "status": "in_progress",
       "next_step": "Health + API + UI live check durchführen",
-      "blocker": "keiner"
+      "blocker": "keiner",
+      "updated_at": "2026-03-01T23:50:00.000Z"
     },
     {
       "id": "TODAY-02",
@@ -25,7 +28,8 @@
       "priority": "P1",
       "status": "todo",
       "next_step": "Check-Intervall + Restart-Regel + Alert-Text definieren",
-      "blocker": "Freigabe der Grenzwerte"
+      "blocker": "Freigabe der Grenzwerte",
+      "updated_at": "2026-03-01T23:50:00.000Z"
     },
     {
       "id": "TODAY-03",
@@ -34,7 +38,8 @@
       "priority": "P2",
       "status": "todo",
       "next_step": "Kurzanleitung für Board-Update schreiben",
-      "blocker": "keiner"
+      "blocker": "keiner",
+      "updated_at": "2026-03-01T23:50:00.000Z"
     }
   ]
 }

@@ -25,6 +25,9 @@
     .P1{border-color:#ff8a8a;color:#ffb3b3}.P2{border-color:#ffd28a;color:#ffe2b8}.P3{border-color:#8ad1ff;color:#bce8ff}
     .todo{background:#3a2430}.in_progress{background:#20304d}.done{background:#1c3f2e}
     .tiny{font-size:12px;opacity:.75}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px}
+    .chip{cursor:pointer;border:1px solid #3a4a84;background:#0f1730;color:#dfe7ff;padding:6px 10px;border-radius:999px;font-size:12px}
+    .chip.active{background:#2b3f76;border-color:#7ea6ff}
     h2{font-size:18px;margin:20px 0 10px}
   </style>
 </head>
@@ -43,29 +46,49 @@
   <div id="agents" class="agents"></div>
 
   <h2>Tasks</h2>
+  <div class="chips">
+    <button class="chip" data-filter="all">Alle</button>
+    <button class="chip" data-filter="P1">Nur P1</button>
+    <button class="chip" data-filter="in_progress">Nur in_progress</button>
+  </div>
   <div id="grid" class="grid"></div>
 
   <script>
     const statusLabel = s => ({todo:'TODO',in_progress:'IN PROGRESS',done:'DONE'}[s] || s);
     const agentStatusLabel = s => ({online:'Online',busy:'Busy',idle:'Idle',offline:'Offline'}[s] || s);
     let board = localStorage.getItem('cockpit_board') || 'strategy';
+    let filter = localStorage.getItem('cockpit_filter') || 'all';
 
     function boardFile(name){
       if(name === 'today') return './data_today.json';
       return './data_strategy.json';
     }
 
+    function formatTime(ts){
+      if(!ts) return 'n/a';
+      const d = new Date(ts);
+      if(Number.isNaN(d.getTime())) return ts;
+      return d.toLocaleString('de-DE', { hour12: false });
+    }
+
     function updateButtons(){
       document.getElementById('btn-strategy').classList.toggle('active', board === 'strategy');
       document.getElementById('btn-today').classList.toggle('active', board === 'today');
       document.getElementById('focusLabel').textContent = `Board: ${board}`;
+      document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.filter === filter));
+    }
+
+    function applyFilter(items){
+      if(filter === 'P1') return items.filter(i => i.priority === 'P1');
+      if(filter === 'in_progress') return items.filter(i => i.status === 'in_progress');
+      return items;
     }
 
     async function render() {
       try {
         const res = await fetch(boardFile(board) + '?_=' + Date.now(), { cache: 'no-store' });
         const data = await res.json();
-        document.getElementById('ts').textContent = `Stand: ${data.generated_at || 'n/a'}`;
+        document.getElementById('ts').textContent = `Stand: ${formatTime(data.generated_at)}`;
 
         const agents = document.getElementById('agents');
         agents.innerHTML = (data.agents || []).map(a => `
@@ -74,13 +97,14 @@
             <div>
               <div class="name">${a.name || '-'}</div>
               <div class="role">${a.role || '-'}</div>
-              <div class="role"><span class="dot ${a.status || 'idle'}"></span>${agentStatusLabel(a.status || 'idle')}</div>
+              <div class="role"><span class="dot ${a.status || 'idle'}"></span>${agentStatusLabel(a.status || 'idle')} · upd ${formatTime(a.updated_at)}</div>
             </div>
           </article>
         `).join('');
 
         const grid = document.getElementById('grid');
-        grid.innerHTML = (data.items || []).map(it => `
+        const filtered = applyFilter(data.items || []);
+        grid.innerHTML = filtered.map(it => `
           <article class="card">
             <h3>${it.id || '-'} · ${it.title || 'Ohne Titel'}</h3>
             <div class="meta">
@@ -90,6 +114,7 @@
             </div>
             <p><strong>Nächster Schritt:</strong> ${it.next_step || '-'}</p>
             <p><strong>Blocker:</strong> ${it.blocker || '-'}</p>
+            <p class="tiny">Zuletzt geändert: ${formatTime(it.updated_at)}</p>
           </article>
         `).join('');
       } catch (err) {
@@ -110,6 +135,13 @@
       updateButtons();
       render();
     });
+
+    document.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
+      filter = chip.dataset.filter;
+      localStorage.setItem('cockpit_filter', filter);
+      updateButtons();
+      render();
+    }));
 
     updateButtons();
     render();
