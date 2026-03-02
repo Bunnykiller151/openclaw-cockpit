@@ -26,8 +26,7 @@ RUN npm install
 # Copy app files
 COPY . .
 
-# Expose port
-EXPOSE 8080
-
+# Railway provides PORT env var dynamically
+# Our server listens on process.env.PORT || 3000
 # Start server
 CMD ["npm", "start"]
