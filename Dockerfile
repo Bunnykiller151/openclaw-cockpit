@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y \
 # Set Python for node-gyp
 ENV PYTHON=/usr/bin/python3
 
+# Set workspace environment
+ENV WORKSPACE_ROOT=/app
+
 WORKDIR /app
 
 # Copy package files

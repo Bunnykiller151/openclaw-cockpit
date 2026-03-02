@@ -23,7 +23,7 @@ const wss = new WebSocket.Server({ server, path: '/terminal' });
 
 // Config
 const PORT = process.env.PORT || 3000;
-const WORKSPACE = '/data/workspace';
+const WORKSPACE = process.env.WORKSPACE_ROOT || '/app';
 const API_KEY = process.env.COCKPIT_API_KEY || 'dev-key-change-in-production';
 const MAX_FILE_SIZE = 40 * 1024 * 1024; // 40MB
 
