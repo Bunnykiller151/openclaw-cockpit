@@ -302,6 +302,66 @@ watcher
   .on('unlink', p => broadcastFileChange('unlink', p))
   .on('ready', () => console.log('👁️  File watcher ready'));
 
+// ==================== TODO API ====================
+
+const { loadTodos, saveTodos } = require('./lib/todos');
+
+// Get all todos
+app.get('/api/todos', requireAuth, (req, res) => {
+  const data = loadTodos();
+  res.json(data);
+});
+
+// Add new todo
+app.post('/api/todos', requireAuth, (req, res) => {
+  const { title, priority = 'medium', category = 'general' } = req.body;
+  if (!title) {
+    return res.status(400).json({ error: 'Title required' });
+  }
+  
+  const data = loadTodos();
+  const todo = {
+    id: Date.now().toString(),
+    title,
+    priority,
+    category,
+    status: 'open',
+    created: new Date().toISOString(),
+    updated: new Date().toISOString()
+  };
+  
+  data.todos.push(todo);
+  saveTodos(data);
+  res.json({ success: true, todo });
+});
+
+// Update todo
+app.put('/api/todos/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+  
+  const data = loadTodos();
+  const todo = data.todos.find(t => t.id === id);
+  
+  if (!todo) {
+    return res.status(404).json({ error: 'Todo not found' });
+  }
+  
+  Object.assign(todo, updates, { updated: new Date().toISOString() });
+  saveTodos(data);
+  res.json({ success: true, todo });
+});
+
+// Delete todo
+app.delete('/api/todos/:id', requireAuth, (req, res) => {
+  const { id } = req.params;
+  
+  const data = loadTodos();
+  data.todos = data.todos.filter(t => t.id !== id);
+  saveTodos(data);
+  res.json({ success: true });
+});
+
 // ==================== BASIC ROUTES ====================
 
 app.get('/api/health', (req, res) => {
