@@ -3,12 +3,12 @@
   "focus": "strategy",
   "agents": [
     { "id": "nana", "name": "Nana", "role": "Orchestrator", "status": "online", "portrait": "./portraits/nana.jpg", "updated_at": "2026-03-01T23:42:03.181Z" },
-    { "id": "kari", "name": "Kari", "role": "Shopify Clerk", "status": "busy", "portrait": "./avatars_kari.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
-    { "id": "kate", "name": "Kate", "role": "Data Analyst", "status": "online", "portrait": "./avatars_kate.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
-    { "id": "samantha", "name": "Samantha", "role": "API Executor", "status": "idle", "portrait": "./avatars_samantha.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
-    { "id": "theresa", "name": "Theresa", "role": "Browser Research", "status": "idle", "portrait": "./avatars_theresa.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
-    { "id": "marta", "name": "Marta", "role": "Support Agent", "status": "idle", "portrait": "./avatars_marta.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
-    { "id": "cassandra", "name": "Cassandra", "role": "Processing Agent", "status": "idle", "portrait": "./avatars_cassandra.svg", "updated_at": "2026-03-01T23:42:03.181Z" }
+    { "id": "kari", "name": "Kari", "role": "Shopify Clerk", "status": "busy", "portrait": "./portraits/kari.jpg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "kate", "name": "Kate", "role": "Data Analyst", "status": "online", "portrait": "./portraits/kate.jpg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "samantha", "name": "Samantha", "role": "API Executor", "status": "idle", "portrait": "./portraits/samantha.jpg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "theresa", "name": "Theresa", "role": "Browser Research", "status": "idle", "portrait": "./portraits/theresa.jpg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "marta", "name": "Marta", "role": "Support Agent", "status": "idle", "portrait": "./portraits/marta.jpg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "cassandra", "name": "Cassandra", "role": "Processing Agent", "status": "idle", "portrait": "./portraits/cassandra.jpg", "updated_at": "2026-03-01T23:42:03.181Z" }
   ],
   "items": [
     {
