@@ -1,0 +1,81 @@
+{
+  "timestamp": "2026-03-02T11:45:20.971779Z",
+  "agents": {
+    "main": {
+      "name": "Nana",
+      "role": "Primary Orchestrator",
+      "model": "openai-codex/gpt-5.3-codex",
+      "status": "active",
+      "description": "Haupt-Agent und first point of contact",
+      "workspace": "/data/workspace",
+      "session_key": null,
+      "last_activity": null
+    },
+    "kate": {
+      "name": "Kate",
+      "role": "Data Analyst",
+      "model": "openai-codex/gpt-5.3-codex",
+      "status": "idle",
+      "description": "Python Expert & Datenanalyse",
+      "workspace": "/data/workspace/agents/kate",
+      "session_key": null,
+      "last_activity": null
+    },
+    "kari": {
+      "name": "Kari",
+      "role": "Shopify Clerk",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Shopify UI/Clerk-Tasks",
+      "workspace": "/data/workspace/agents/kari",
+      "session_key": null,
+      "last_activity": null
+    },
+    "samantha": {
+      "name": "Samantha",
+      "role": "API Execution",
+      "model": "openai-codex/gpt-5.3-codex",
+      "status": "idle",
+      "description": "API-first Execution Agent",
+      "workspace": "/data/workspace/agents/samantha",
+      "session_key": null,
+      "last_activity": null
+    },
+    "theresa": {
+      "name": "Theresa",
+      "role": "Browser Research",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Web-Research & Data Extraction",
+      "workspace": "/data/workspace/agents/theresa",
+      "session_key": null,
+      "last_activity": null
+    },
+    "cassandra": {
+      "name": "Cassandra",
+      "role": "TBD",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Konfiguriert, Rolle noch nicht definiert",
+      "workspace": "/data/workspace/agents/cassandra",
+      "session_key": null,
+      "last_activity": null
+    },
+    "marta": {
+      "name": "Marta",
+      "role": "TBD",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Konfiguriert, Rolle noch nicht definiert",
+      "workspace": "/data/workspace/agents/marta",
+      "session_key": null,
+      "last_activity": null
+    }
+  },
+  "summary": {
+    "total": 7,
+    "active": 1,
+    "idle": 6,
+    "busy": 0
+  }
+}

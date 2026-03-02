@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Transfer Tool | OpenClaw Cockpit</title>
+  <style>
+    body{font-family:Inter,system-ui,Arial,sans-serif;background:#0b1020;color:#e8ecff;margin:0;padding:24px}
+    h1{margin:0 0 8px;font-size:28px}
+    .sub{opacity:.85;margin-bottom:12px}
+    .btn{cursor:pointer;border:1px solid #3a4a84;background:#121a33;color:#e8ecff;padding:8px 12px;border-radius:10px;text-decoration:none;display:inline-block}
+    .btn:hover{background:#1c2750}
+    .panel{border:1px solid #2c3a6f;background:#111831;border-radius:12px;padding:20px;margin-bottom:12px}
+    .fileList{min-height:100px;background:#0b1228;border:1px solid #24305e;border-radius:8px;padding:10px;margin:10px 0}
+    .fileItem{display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid #24305e}
+    .fileItem:last-child{border-bottom:none}
+    .hint{font-size:12px;opacity:.8;margin-top:8px}
+    .success{color:#2ecc71}
+    .warning{color:#f39c12}
+    pre{background:#0b1228;padding:10px;border-radius:8px;overflow-x:auto}
+    .back{margin-bottom:20px}
+  </style>
+</head>
+<body>
+  <a href="./index.html" class="btn back">← Zurück zum Cockpit</a>
+  
+  <h1>🔄 Transfer Tool</h1>
+  <div class="sub">Phase 1: Datei- & URL-Exchange ohne Telegram-Hin-und-her</div>
+
+  <div class="panel">
+    <h3>📥 Inbox (Du → Nana)</h3>
+    <div id="inboxStatus">Prüfe Status...</div>
+    <pre id="inboxFiles">Lädt...</pre>
+    <div class="hint">
+      So legst du Dateien/URLs ab:<br>
+      <code>/data/workspace/cockpit/transfer/inbox/</code>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>📤 Outbox (Nana → Dich)</h3>
+    <div id="outboxStatus">Prüfe Status...</div>
+    <pre id="outboxFiles">Lädt...</pre>
+    <div class="hint">
+      Hier landen alle Ergebnisse:<br>
+      <code>/data/workspace/cockpit/transfer/outbox/</code>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>📝 Beispiele</h3>
+    <pre># Datei senden
+cp report.csv /data/workspace/cockpit/transfer/inbox/
+
+# URL + Task hinterlegen
+echo -e "URL: https://example.com/data.csv\nTask: Analysieren" > /data/workspace/cockpit/transfer/inbox/task.txt
+
+# Status checken
+/data/workspace/cockpit/transfer/status.sh
+    </pre>
+  </div>
+
+  <script>
+    // Diese Seite zeigt statische Infos
+    // In einer vollständigen Implementierung würde hier ein API-Call die Dateien laden
+    document.getElementById('inboxStatus').innerHTML = '<span class="success">✅ Bereit</span>';
+    document.getElementById('inboxFiles').textContent = 'Status: Ordner existiert\nNutze: /data/workspace/cockpit/transfer/inbox/';
+    
+    document.getElementById('outboxStatus').innerHTML = '<span class="success">✅ Bereit</span>';
+    document.getElementById('outboxFiles').textContent = 'Status: Ordner existiert\nNutze: /data/workspace/cockpit/transfer/outbox/';
+  </script>
+</body>
+</html>

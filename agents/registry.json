@@ -1,0 +1,76 @@
+{
+  "agents": [
+    {
+      "id": "main",
+      "name": "Nana",
+      "role": "Primary Orchestrator",
+      "workspace": "/data/workspace",
+      "model": "openai-codex/gpt-5.3-codex",
+      "status": "active",
+      "description": "Haupt-Agent und first point of contact"
+    },
+    {
+      "id": "kate",
+      "name": "Kate",
+      "role": "Data Analyst",
+      "workspace": "/data/workspace/agents/kate",
+      "model": "openai-codex/gpt-5.3-codex",
+      "status": "idle",
+      "description": "Python Expert & Datenanalyse"
+    },
+    {
+      "id": "kari",
+      "name": "Kari",
+      "role": "Shopify Clerk",
+      "workspace": "/data/workspace/agents/kari",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Shopify UI/Clerk-Tasks"
+    },
+    {
+      "id": "samantha",
+      "name": "Samantha",
+      "role": "API Execution",
+      "workspace": "/data/workspace/agents/samantha",
+      "model": "openai-codex/gpt-5.3-codex",
+      "fallback": "openrouter/auto",
+      "status": "idle",
+      "description": "API-first Execution Agent"
+    },
+    {
+      "id": "theresa",
+      "name": "Theresa",
+      "role": "Browser Research",
+      "workspace": "/data/workspace/agents/theresa",
+      "model": "openrouter/auto",
+      "fallback": "openai-codex/gpt-5.3-codex",
+      "status": "idle",
+      "description": "Web-Research & Data Extraction"
+    },
+    {
+      "id": "cassandra",
+      "name": "Cassandra",
+      "role": "TBD",
+      "workspace": "/data/workspace/agents/cassandra",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Konfiguriert, Rolle noch nicht definiert"
+    },
+    {
+      "id": "marta",
+      "name": "Marta",
+      "role": "TBD",
+      "workspace": "/data/workspace/agents/marta",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Konfiguriert, Rolle noch nicht definiert"
+    }
+  ],
+  "routing_rules": {
+    "api_tasks": "samantha",
+    "shopify_ui": "kari",
+    "data_analysis": "kate",
+    "web_research": "theresa",
+    "orchestration": "main"
+  }
+}

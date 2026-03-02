@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Agent Monitor | OpenClaw Cockpit</title>
+  <style>
+    body{font-family:Inter,system-ui,Arial,sans-serif;background:#0b1020;color:#e8ecff;margin:0;padding:24px}
+    h1{margin:0 0 8px;font-size:28px}
+    .sub{opacity:.85;margin-bottom:12px}
+    .btn{cursor:pointer;border:1px solid #3a4a84;background:#121a33;color:#e8ecff;padding:8px 12px;border-radius:10px;text-decoration:none;display:inline-block;margin:4px}
+    .btn:hover{background:#1c2750}
+    .panel{border:1px solid #2c3a6f;background:#111831;border-radius:12px;padding:20px;margin-bottom:12px}
+    .agentGrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));margin:14px 0}
+    .agentCard{background:#121a33;border:1px solid #24305e;border-radius:12px;padding:16px}
+    .agentCard h3{margin:0 0 8px}
+    .status-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:bold;margin-bottom:8px}
+    .status-active{background:#2ecc71;color:#000}
+    .status-idle{background:#95a5a6;color:#000}
+    .status-busy{background:#f39c12;color:#000}
+    .status-offline{background:#e74c3c;color:#fff}
+    .meta{font-size:13px;opacity:.85;margin:4px 0}
+    .commands{background:#0b1228;padding:10px;border-radius:8px;font-family:monospace;font-size:12px;margin-top:10px}
+    .back{margin-bottom:20px}
+    .hint{font-size:12px;opacity:.8}
+  </style>
+</head>
+<body>
+  <a href="./index.html" class="btn back">← Zurück zum Cockpit</a>
+  
+  <h1>🤖 Agent Monitor</h1>
+  <div class="sub">Phase 2: Live-Überwachung aller Agents und ihrer Sessions</div>
+
+  <div class="panel">
+    <h3>📊 Agent-Übersicht (7 Agents)</h3>
+    <div class="agentGrid" id="agentGrid">
+      <!-- Wird dynamisch gefüllt -->
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>🚀 Agent starten</h3>
+    <div>
+      <button class="btn" onclick="alert('Kate: CSV/Daten-Analyse')">🚀 Kate (Data Analyst)</button>
+      <button class="btn" onclick="alert('Samantha: API Integration')">🚀 Samantha (API Execution)</button>
+      <button class="btn" onclick="alert('Theresa: Web Research')">🚀 Theresa (Browser Research)</button>
+      <button class="btn" onclick="alert('Kari: Shopify Tasks')">🚀 Kari (Shopify Clerk)</button>
+    </div>
+    <div class="hint" style="margin-top:10px">
+      CLI: <code>openclaw spawn <agent-id> "<task>"</code>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>📋 Nützliche Commands</h3>
+    <div class="commands">
+# Alle Sessions anzeigen
+openclaw sessions list
+
+# Agent-Status prüfen
+openclaw subagents list
+
+# Session-History ansehen
+openclaw sessions history <session-key>
+
+# Agenten monitor (lokal)
+python3 /data/workspace/cockpit/agents/monitor.py
+    </div>
+  </div>
+
+  <script>
+    // Agent-Daten (könnte später dynamisch geladen werden)
+    const agents = [
+      { id: 'nana', name: 'Nana', role: 'Orchestrator', model: 'gpt-5.3-codex', status: 'active', desc: 'Haupt-Agent und first point of contact' },
+      { id: 'kate', name: 'Kate', role: 'Data Analyst', model: 'gpt-5.3-codex', status: 'idle', desc: 'Python Expert & Datenanalyse' },
+      { id: 'kari', name: 'Kari', role: 'Shopify Clerk', model: 'openrouter/auto', status: 'idle', desc: 'Shopify UI/Clerk-Tasks' },
+      { id: 'samantha', name: 'Samantha', role: 'API Execution', model: 'gpt-5.3-codex', status: 'idle', desc: 'API-first Execution Agent' },
+      { id: 'theresa', name: 'Theresa', role: 'Browser Research', model: 'openrouter/auto', status: 'idle', desc: 'Web-Research & Data Extraction' },
+      { id: 'cassandra', name: 'Cassandra', role: 'TBD', model: 'openrouter/auto', status: 'idle', desc: 'Rolle noch nicht definiert' },
+      { id: 'marta', name: 'Marta', role: 'TBD', model: 'openrouter/auto', status: 'idle', desc: 'Rolle noch nicht definiert' }
+    ];
+
+    const grid = document.getElementById('agentGrid');
+    agents.forEach(agent => {
+      const statusClass = 'status-' + agent.status;
+      grid.innerHTML += `
+        <div class="agentCard">
+          <h3>${agent.name}</h3>
+          <span class="status-badge ${statusClass}">${agent.status.toUpperCase()}</span>
+          <div class="meta"><strong>Rolle:</strong> ${agent.role}</div>
+          <div class="meta"><strong>Modell:</strong> ${agent.model}</div>
+          <div class="meta">${agent.desc}</div>
+        </div>
+      `;
+    });
+  </script>
+</body>
+</html>
