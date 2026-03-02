@@ -423,9 +423,27 @@
       return div.innerHTML;
     }
     
-    function downloadFile(path) {
-      const relativePath = path.replace(WORKSPACE + '/', '');
-      window.open(`/api/files/download/${relativePath}?key=${apiKey}`, '_blank');
+    async function downloadFile(path) {
+      try {
+        const relativePath = path.replace(WORKSPACE + '/', '');
+        const response = await fetch(`/api/files/download/${relativePath}`, {
+          headers: { 'X-API-Key': apiKey }
+        });
+        
+        if (!response.ok) throw new Error('Download failed');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = path.split('/').pop();
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } catch (err) {
+        showMessage('Download error: ' + err.message, 'error');
+      }
     }
     
     async function deleteFile(path) {
