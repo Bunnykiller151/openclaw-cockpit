@@ -13,6 +13,11 @@
     .btn.active{background:#24407a;border-color:#6ea0ff}
     .stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
     .stat{border:1px solid #3a4a84;background:#121a33;border-radius:999px;padding:6px 10px;font-size:12px}
+    .panel{border:1px solid #2c3a6f;background:#111831;border-radius:12px;padding:10px;margin-bottom:12px}
+    .panelRow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    input[type='password']{background:#0b1228;color:#e8ecff;border:1px solid #3a4a84;border-radius:8px;padding:8px 10px;min-width:280px}
+    .hint{font-size:12px;opacity:.8}
+
     .agents{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));margin:14px 0 18px}
     .agent{display:flex;gap:10px;align-items:center;background:#121a33;border:1px solid #24305e;border-radius:12px;padding:10px}
     .agent img{width:44px;height:44px;border-radius:50%;border:1px solid #3a4a84;object-fit:cover}
@@ -21,7 +26,8 @@
     .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
     .online{background:#2ecc71}.busy{background:#f39c12}.idle{background:#95a5a6}.offline{background:#e74c3c}
     .stale{color:#ffb3b3}
-    .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+
+    .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
     .card{background:#121a33;border:1px solid #24305e;border-radius:14px;padding:14px}
     .meta{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
     .pill{padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #3a4a84}
@@ -31,6 +37,13 @@
     .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px}
     .chip{cursor:pointer;border:1px solid #3a4a84;background:#0f1730;color:#dfe7ff;padding:6px 10px;border-radius:999px;font-size:12px}
     .chip.active{background:#2b3f76;border-color:#7ea6ff}
+
+    .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .mini{cursor:pointer;border:1px solid #3a4a84;background:#0f1730;color:#dfe7ff;padding:4px 8px;border-radius:999px;font-size:11px}
+    .mini.todoBtn{border-color:#994455}
+    .mini.progressBtn{border-color:#3d5b9b}
+    .mini.doneBtn{border-color:#3d7b52}
+
     h2{font-size:18px;margin:20px 0 10px}
   </style>
 </head>
@@ -41,6 +54,15 @@
   <div class="controls">
     <button id="btn-strategy" class="btn">Strategy</button>
     <button id="btn-today" class="btn">Today</button>
+  </div>
+
+  <div class="panel">
+    <div class="panelRow">
+      <input id="apiKeyInput" type="password" placeholder="COCKPIT API Key (nur lokal gespeichert)" />
+      <button id="saveApiKey" class="btn">Key speichern</button>
+      <button id="sendHeartbeat" class="btn">Nana Heartbeat senden</button>
+    </div>
+    <div class="hint">Quick-Buttons auf Tasks nutzen diesen Key für PATCH-Requests.</div>
   </div>
 
   <div id="stats" class="stats"></div>
@@ -61,12 +83,10 @@
     const agentStatusLabel = s => ({online:'Online',busy:'Busy',idle:'Idle',offline:'Offline'}[s] || s);
     let board = localStorage.getItem('cockpit_board') || 'strategy';
     let filter = localStorage.getItem('cockpit_filter') || 'all';
+    let apiKey = localStorage.getItem('cockpit_api_key') || '';
     let lastRefreshTs = null;
 
-    function boardFile(name){
-      if(name === 'today') return './data_today.json';
-      return './data_strategy.json';
-    }
+    const boardFile = (name) => name === 'today' ? './data_today.json' : './data_strategy.json';
 
     function formatTime(ts){
       if(!ts) return 'n/a';
@@ -116,6 +136,54 @@
       `;
     }
 
+    async function patchItemStatus(itemId, status){
+      if(!apiKey){
+        alert('Bitte zuerst API-Key speichern.');
+        return;
+      }
+      const resp = await fetch(`/api/item/${encodeURIComponent(itemId)}?board=${board}`, {
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': apiKey
+        },
+        body: JSON.stringify({ status })
+      });
+      if(!resp.ok){
+        const t = await resp.text();
+        alert('Update fehlgeschlagen: ' + t);
+        return;
+      }
+      await render();
+      lastRefreshTs = Date.now();
+    }
+
+    async function sendHeartbeat(){
+      if(!apiKey){
+        alert('Bitte zuerst API-Key speichern.');
+        return;
+      }
+      const resp = await fetch(`/api/heartbeat?board=${board}`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': apiKey
+        },
+        body: JSON.stringify({
+          agentId: 'nana',
+          status: 'online',
+          note: 'UI Heartbeat'
+        })
+      });
+      if(!resp.ok){
+        const t = await resp.text();
+        alert('Heartbeat fehlgeschlagen: ' + t);
+        return;
+      }
+      await render();
+      lastRefreshTs = Date.now();
+    }
+
     async function render() {
       try {
         const res = await fetch(boardFile(board) + '?_=' + Date.now(), { cache: 'no-store' });
@@ -152,8 +220,19 @@
             <p><strong>Nächster Schritt:</strong> ${it.next_step || '-'}</p>
             <p><strong>Blocker:</strong> ${it.blocker || '-'}</p>
             <p class="tiny">Zuletzt geändert: ${formatTime(it.updated_at)}</p>
+            <div class="quick">
+              <button class="mini todoBtn" data-item="${it.id}" data-status="todo">todo</button>
+              <button class="mini progressBtn" data-item="${it.id}" data-status="in_progress">in_progress</button>
+              <button class="mini doneBtn" data-item="${it.id}" data-status="done">done</button>
+            </div>
           </article>
         `).join('');
+
+        document.querySelectorAll('.mini').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            await patchItemStatus(btn.dataset.item, btn.dataset.status);
+          });
+        });
       } catch (err) {
         document.getElementById('grid').innerHTML = `<pre>Fehler beim Laden: ${err}</pre>`;
       }
@@ -180,6 +259,14 @@
       render();
     }));
 
+    document.getElementById('saveApiKey').addEventListener('click', () => {
+      apiKey = document.getElementById('apiKeyInput').value.trim();
+      localStorage.setItem('cockpit_api_key', apiKey);
+      alert('API-Key gespeichert.');
+    });
+
+    document.getElementById('sendHeartbeat').addEventListener('click', sendHeartbeat);
+
     function tickRefreshLabel(){
       const el = document.getElementById('lastRefresh');
       if(!lastRefreshTs){ el.textContent = 'refresh …'; return; }
@@ -187,6 +274,7 @@
       el.textContent = `refresh vor ${sec}s`;
     }
 
+    document.getElementById('apiKeyInput').value = apiKey;
     updateButtons();
     render().then(()=>{ lastRefreshTs = Date.now(); tickRefreshLabel(); });
     setInterval(async () => { await render(); lastRefreshTs = Date.now(); }, 20000);

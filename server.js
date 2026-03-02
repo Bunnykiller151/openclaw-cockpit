@@ -127,11 +127,6 @@ http.createServer(async (req, res) => {
       const data = readBoard(board);
       const now = nowIso();
       const idx = (data.agents || []).findIndex(a => a.id === agentId);
-      const patch = {
-        status: payload.status,
-        note: payload.note,
-        updated_at: now
-      };
 
       if (idx === -1) {
         data.agents = data.agents || [];
@@ -147,8 +142,8 @@ http.createServer(async (req, res) => {
       } else {
         data.agents[idx] = {
           ...data.agents[idx],
-          ...(patch.status ? { status: patch.status } : {}),
-          ...(patch.note !== undefined ? { note: patch.note } : {}),
+          ...(payload.status ? { status: payload.status } : {}),
+          ...(payload.note !== undefined ? { note: payload.note } : {}),
           updated_at: now
         };
       }
@@ -156,6 +151,52 @@ http.createServer(async (req, res) => {
       data.generated_at = now;
       writeBoard(board, data);
       return sendJson(res, 200, { ok: true, board, agentId, updated_at: now });
+    } catch (err) {
+      return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
+    }
+  }
+
+  // Bulk agent sync (bridge endpoint)
+  if (method === 'POST' && (pathname === '/api/agent-sync' || pathname === '/openclaw/cockpit/api/agent-sync')) {
+    if (!requireApiKey(req, res)) return;
+    try {
+      const board = getBoardFromUrl(rawUrl);
+      const payload = JSON.parse(await readBody(req));
+      const updates = Array.isArray(payload?.agents) ? payload.agents : [];
+      const data = readBoard(board);
+      data.agents = Array.isArray(data.agents) ? data.agents : [];
+      const now = nowIso();
+
+      for (const u of updates) {
+        const id = String(u.id || '').trim();
+        if (!id) continue;
+        const idx = data.agents.findIndex(a => a.id === id);
+        if (idx === -1) {
+          data.agents.push({
+            id,
+            name: u.name || id,
+            role: u.role || 'Agent',
+            portrait: u.portrait || '',
+            status: u.status || 'online',
+            note: u.note || '',
+            updated_at: now
+          });
+        } else {
+          data.agents[idx] = {
+            ...data.agents[idx],
+            ...(u.name ? { name: u.name } : {}),
+            ...(u.role ? { role: u.role } : {}),
+            ...(u.portrait ? { portrait: u.portrait } : {}),
+            ...(u.status ? { status: u.status } : {}),
+            ...(u.note !== undefined ? { note: u.note } : {}),
+            updated_at: now
+          };
+        }
+      }
+
+      data.generated_at = now;
+      writeBoard(board, data);
+      return sendJson(res, 200, { ok: true, board, updatedAgents: updates.length, updated_at: now });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
     }
