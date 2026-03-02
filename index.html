@@ -7,17 +7,20 @@
   <style>
     body{font-family:Inter,system-ui,Arial,sans-serif;background:#0b1020;color:#e8ecff;margin:0;padding:24px}
     h1{margin:0 0 8px;font-size:28px}
-    .sub{opacity:.8;margin-bottom:12px}
-    .controls{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+    .sub{opacity:.85;margin-bottom:12px}
+    .controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
     .btn{cursor:pointer;border:1px solid #3a4a84;background:#121a33;color:#e8ecff;padding:8px 12px;border-radius:10px}
     .btn.active{background:#24407a;border-color:#6ea0ff}
-    .agents{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));margin:14px 0 18px}
+    .stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+    .stat{border:1px solid #3a4a84;background:#121a33;border-radius:999px;padding:6px 10px;font-size:12px}
+    .agents{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));margin:14px 0 18px}
     .agent{display:flex;gap:10px;align-items:center;background:#121a33;border:1px solid #24305e;border-radius:12px;padding:10px}
-    .agent img{width:40px;height:40px;border-radius:50%;border:1px solid #3a4a84;object-fit:cover}
+    .agent img{width:44px;height:44px;border-radius:50%;border:1px solid #3a4a84;object-fit:cover}
     .agent .name{font-weight:700}
-    .agent .role{font-size:12px;opacity:.8}
+    .agent .role{font-size:12px;opacity:.85}
     .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
     .online{background:#2ecc71}.busy{background:#f39c12}.idle{background:#95a5a6}.offline{background:#e74c3c}
+    .stale{color:#ffb3b3}
     .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
     .card{background:#121a33;border:1px solid #24305e;border-radius:14px;padding:14px}
     .meta{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
@@ -33,14 +36,14 @@
 </head>
 <body>
   <h1>⚡ OpenClaw Cockpit</h1>
-  <div class="sub"><span id="focusLabel">Board</span> · <span id="ts">lädt…</span></div>
+  <div class="sub"><span id="focusLabel">Board</span> · <span id="ts">lädt…</span> · <span id="lastRefresh">refresh …</span></div>
 
   <div class="controls">
     <button id="btn-strategy" class="btn">Strategy</button>
     <button id="btn-today" class="btn">Today</button>
   </div>
 
-  <div class="tiny">Auto-Refresh: alle 20 Sekunden</div>
+  <div id="stats" class="stats"></div>
 
   <h2>Agent Status</h2>
   <div id="agents" class="agents"></div>
@@ -58,6 +61,7 @@
     const agentStatusLabel = s => ({online:'Online',busy:'Busy',idle:'Idle',offline:'Offline'}[s] || s);
     let board = localStorage.getItem('cockpit_board') || 'strategy';
     let filter = localStorage.getItem('cockpit_filter') || 'all';
+    let lastRefreshTs = null;
 
     function boardFile(name){
       if(name === 'today') return './data_today.json';
@@ -69,6 +73,18 @@
       const d = new Date(ts);
       if(Number.isNaN(d.getTime())) return ts;
       return d.toLocaleString('de-DE', { hour12: false });
+    }
+
+    function minutesAgo(ts){
+      if(!ts) return null;
+      const d = new Date(ts).getTime();
+      if(Number.isNaN(d)) return null;
+      return Math.floor((Date.now() - d) / 60000);
+    }
+
+    function isStale(ts, limitMin = 8){
+      const m = minutesAgo(ts);
+      return m !== null && m > limitMin;
     }
 
     function updateButtons(){
@@ -84,23 +100,44 @@
       return items;
     }
 
+    function renderStats(data){
+      const items = data.items || [];
+      const inProgress = items.filter(i => i.status === 'in_progress').length;
+      const done = items.filter(i => i.status === 'done').length;
+      const p1 = items.filter(i => i.priority === 'P1').length;
+      const staleAgents = (data.agents || []).filter(a => isStale(a.updated_at)).length;
+
+      document.getElementById('stats').innerHTML = `
+        <span class="stat">Tasks: ${items.length}</span>
+        <span class="stat">In Progress: ${inProgress}</span>
+        <span class="stat">Done: ${done}</span>
+        <span class="stat">P1: ${p1}</span>
+        <span class="stat">Stale Agents: ${staleAgents}</span>
+      `;
+    }
+
     async function render() {
       try {
         const res = await fetch(boardFile(board) + '?_=' + Date.now(), { cache: 'no-store' });
         const data = await res.json();
         document.getElementById('ts').textContent = `Stand: ${formatTime(data.generated_at)}`;
+        renderStats(data);
 
         const agents = document.getElementById('agents');
-        agents.innerHTML = (data.agents || []).map(a => `
-          <article class="agent">
-            <img src="${a.portrait || ''}" alt="${a.name || 'Agent'}" />
-            <div>
-              <div class="name">${a.name || '-'}</div>
-              <div class="role">${a.role || '-'}</div>
-              <div class="role"><span class="dot ${a.status || 'idle'}"></span>${agentStatusLabel(a.status || 'idle')} · upd ${formatTime(a.updated_at)}</div>
-            </div>
-          </article>
-        `).join('');
+        agents.innerHTML = (data.agents || []).map(a => {
+          const stale = isStale(a.updated_at);
+          return `
+            <article class="agent">
+              <img src="${a.portrait || ''}" alt="${a.name || 'Agent'}" />
+              <div>
+                <div class="name">${a.name || '-'}</div>
+                <div class="role">${a.role || '-'}</div>
+                <div class="role ${stale ? 'stale' : ''}"><span class="dot ${a.status || 'idle'}"></span>${agentStatusLabel(a.status || 'idle')} · upd ${formatTime(a.updated_at)}${stale ? ' · stale' : ''}</div>
+                ${a.note ? `<div class="tiny">${a.note}</div>` : ''}
+              </div>
+            </article>
+          `;
+        }).join('');
 
         const grid = document.getElementById('grid');
         const filtered = applyFilter(data.items || []);
@@ -143,9 +180,17 @@
       render();
     }));
 
+    function tickRefreshLabel(){
+      const el = document.getElementById('lastRefresh');
+      if(!lastRefreshTs){ el.textContent = 'refresh …'; return; }
+      const sec = Math.floor((Date.now() - lastRefreshTs) / 1000);
+      el.textContent = `refresh vor ${sec}s`;
+    }
+
     updateButtons();
-    render();
-    setInterval(render, 20000);
+    render().then(()=>{ lastRefreshTs = Date.now(); tickRefreshLabel(); });
+    setInterval(async () => { await render(); lastRefreshTs = Date.now(); }, 20000);
+    setInterval(tickRefreshLabel, 1000);
   </script>
 </body>
 </html>

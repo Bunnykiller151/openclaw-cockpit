@@ -67,12 +67,19 @@ function requireApiKey(req, res) {
   return true;
 }
 
+function nowIso() {
+  return new Date().toISOString();
+}
+
 const mime = {
   '.html': 'text/html; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
-  '.svg': 'image/svg+xml'
+  '.svg': 'image/svg+xml',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png'
 };
 
 http.createServer(async (req, res) => {
@@ -93,7 +100,7 @@ http.createServer(async (req, res) => {
       if (!payload || typeof payload !== 'object' || !Array.isArray(payload.items)) {
         return sendJson(res, 400, { ok: false, error: 'Invalid payload: expected object with items[]' });
       }
-      const now = new Date().toISOString();
+      const now = nowIso();
       const normalized = {
         ...payload,
         focus: board,
@@ -103,6 +110,52 @@ http.createServer(async (req, res) => {
       };
       writeBoard(board, normalized);
       return sendJson(res, 200, { ok: true, updated: true, board, generated_at: normalized.generated_at });
+    } catch (err) {
+      return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
+    }
+  }
+
+  // Heartbeat endpoint for agent presence updates
+  if (method === 'POST' && (pathname === '/api/heartbeat' || pathname === '/openclaw/cockpit/api/heartbeat')) {
+    if (!requireApiKey(req, res)) return;
+    try {
+      const board = getBoardFromUrl(rawUrl);
+      const payload = JSON.parse(await readBody(req));
+      const agentId = String(payload.agentId || '').trim();
+      if (!agentId) return sendJson(res, 400, { ok: false, error: 'agentId is required' });
+
+      const data = readBoard(board);
+      const now = nowIso();
+      const idx = (data.agents || []).findIndex(a => a.id === agentId);
+      const patch = {
+        status: payload.status,
+        note: payload.note,
+        updated_at: now
+      };
+
+      if (idx === -1) {
+        data.agents = data.agents || [];
+        data.agents.push({
+          id: agentId,
+          name: payload.name || agentId,
+          role: payload.role || 'Agent',
+          portrait: payload.portrait || '',
+          status: payload.status || 'online',
+          note: payload.note || '',
+          updated_at: now
+        });
+      } else {
+        data.agents[idx] = {
+          ...data.agents[idx],
+          ...(patch.status ? { status: patch.status } : {}),
+          ...(patch.note !== undefined ? { note: patch.note } : {}),
+          updated_at: now
+        };
+      }
+
+      data.generated_at = now;
+      writeBoard(board, data);
+      return sendJson(res, 200, { ok: true, board, agentId, updated_at: now });
     } catch (err) {
       return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
     }
@@ -120,7 +173,7 @@ http.createServer(async (req, res) => {
       const idx = (data.items || []).findIndex(i => i.id === itemId);
       if (idx === -1) return sendJson(res, 404, { ok: false, error: `Item ${itemId} not found`, board });
 
-      const now = new Date().toISOString();
+      const now = nowIso();
       data.items[idx] = { ...data.items[idx], ...patch, updated_at: now };
       data.generated_at = now;
       writeBoard(board, data);
@@ -142,7 +195,7 @@ http.createServer(async (req, res) => {
       const idx = (data.agents || []).findIndex(a => a.id === agentId);
       if (idx === -1) return sendJson(res, 404, { ok: false, error: `Agent ${agentId} not found`, board });
 
-      const now = new Date().toISOString();
+      const now = nowIso();
       data.agents[idx] = { ...data.agents[idx], ...patch, updated_at: now };
       data.generated_at = now;
       writeBoard(board, data);
