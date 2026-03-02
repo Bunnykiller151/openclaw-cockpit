@@ -3,96 +3,524 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Agent Monitor | OpenClaw Cockpit</title>
+  <title>Agent Control | OpenClaw Cockpit</title>
   <style>
-    body{font-family:Inter,system-ui,Arial,sans-serif;background:#0b1020;color:#e8ecff;margin:0;padding:24px}
-    h1{margin:0 0 8px;font-size:28px}
-    .sub{opacity:.85;margin-bottom:12px}
-    .btn{cursor:pointer;border:1px solid #3a4a84;background:#121a33;color:#e8ecff;padding:8px 12px;border-radius:10px;text-decoration:none;display:inline-block;margin:4px}
-    .btn:hover{background:#1c2750}
-    .panel{border:1px solid #2c3a6f;background:#111831;border-radius:12px;padding:20px;margin-bottom:12px}
-    .agentGrid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));margin:14px 0}
-    .agentCard{background:#121a33;border:1px solid #24305e;border-radius:12px;padding:16px}
-    .agentCard h3{margin:0 0 8px}
-    .status-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:bold;margin-bottom:8px}
-    .status-active{background:#2ecc71;color:#000}
-    .status-idle{background:#95a5a6;color:#000}
-    .status-busy{background:#f39c12;color:#000}
-    .status-offline{background:#e74c3c;color:#fff}
-    .meta{font-size:13px;opacity:.85;margin:4px 0}
-    .commands{background:#0b1228;padding:10px;border-radius:8px;font-family:monospace;font-size:12px;margin-top:10px}
-    .back{margin-bottom:20px}
-    .hint{font-size:12px;opacity:.8}
+    * { box-sizing: border-box; }
+    body {
+      font-family: Inter, system-ui, Arial, sans-serif;
+      background: #0b1020;
+      color: #e8ecff;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      background: #121a33;
+      border-bottom: 1px solid #2c3a6f;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 18px;
+      color: #00d4ff;
+    }
+    .nav {
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      cursor: pointer;
+      border: 1px solid #3a4a84;
+      background: #121a33;
+      color: #e8ecff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .btn:hover {
+      background: #1c2750;
+    }
+    .btn.primary {
+      background: #24407a;
+      border-color: #6ea6ff;
+    }
+    .btn.success {
+      background: #1c3f2e;
+      border-color: #3d7b52;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      padding: 20px;
+      gap: 20px;
+    }
+    
+    .panel {
+      background: #111831;
+      border: 1px solid #2c3a6f;
+      border-radius: 12px;
+      padding: 20px;
+      overflow: auto;
+    }
+    
+    .sidebar {
+      width: 300px;
+    }
+    
+    .content {
+      flex: 1;
+    }
+    
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 15px;
+    }
+    
+    .agent-card {
+      background: #0b1228;
+      border: 1px solid #24305e;
+      border-radius: 12px;
+      padding: 15px;
+      transition: border-color 0.2s;
+    }
+    .agent-card:hover {
+      border-color: #3a4a84;
+    }
+    
+    .agent-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .agent-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      border: 2px solid #3a4a84;
+      object-fit: cover;
+    }
+    .agent-title {
+      flex: 1;
+    }
+    .agent-name {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+    .agent-role {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .status-active {
+      background: #2ecc71;
+      color: #000;
+    }
+    .status-idle {
+      background: #95a5a6;
+      color: #000;
+    }
+    .status-busy {
+      background: #f39c12;
+      color: #000;
+    }
+    .status-offline {
+      background: #e74c3c;
+      color: #fff;
+    }
+    
+    .agent-meta {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-bottom: 12px;
+    }
+    
+    .agent-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .agent-actions .btn {
+      flex: 1;
+      font-size: 12px;
+      padding: 8px;
+    }
+    
+    .spawn-panel {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #2c3a6f;
+    }
+    
+    .task-input {
+      width: 100%;
+      background: #0b1228;
+      border: 1px solid #3a4a84;
+      color: #e8ecff;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 60px;
+    }
+    
+    .log-panel {
+      margin-top: 20px;
+      background: #0b1228;
+      border: 1px solid #24305e;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 300px;
+      overflow: auto;
+      font-family: 'SF Mono', monospace;
+      font-size: 12px;
+    }
+    .log-entry {
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1a243d;
+    }
+    .log-time {
+      color: #00d4ff;
+      margin-right: 8px;
+    }
+    .log-info {
+      color: #2ecc71;
+    }
+    .log-error {
+      color: #e74c3c;
+    }
+    
+    .api-key-input {
+      width: 100%;
+      background: #0b1228;
+      border: 1px solid #3a4a84;
+      color: #e8ecff;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-family: monospace;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .stat-box {
+      background: #0b1228;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00d4ff;
+    }
+    .stat-label {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-top: 4px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      opacity: 0.7;
+    }
+    
+    .error {
+      background: #3a2430;
+      border: 1px solid #994455;
+      color: #ff8a8a;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    
+    .success {
+      background: #1c3f2e;
+      border: 1px solid #3d7b52;
+      color: #2ecc71;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body>
-  <a href="./index.html" class="btn back">← Zurück zum Cockpit</a>
+  <div class="header">
+    <h1>🤖 Agent Control</h1>
+    <div class="nav">
+      <a href="./index.html" class="btn">← Dashboard</a>
+      <a href="./console.html" class="btn">💻 Console</a>
+      <a href="./files.html" class="btn">📁 Files</a>
+      <button class="btn primary" onclick="refreshAgents()">🔄 Refresh</button>
+    </div>
+  </div>
   
-  <h1>🤖 Agent Monitor</h1>
-  <div class="sub">Phase 2: Live-Überwachung aller Agents und ihrer Sessions</div>
-
-  <div class="panel">
-    <h3>📊 Agent-Übersicht (7 Agents)</h3>
-    <div class="agentGrid" id="agentGrid">
-      <!-- Wird dynamisch gefüllt -->
+  <div class="main">
+    <div class="panel sidebar">
+      <h3>⚙️ Settings</h3>
+      <label>API Key:</label>
+      <input type="password" id="apiKey" class="api-key-input" placeholder="COCKPIT_API_KEY">
+      <button class="btn primary" onclick="saveApiKey()" style="width: 100%; margin-bottom: 20px;">Save Key</button>
+      
+      <h3>📊 Overview</h3>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value" id="totalAgents">-</div>
+          <div class="stat-label">Total Agents</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="activeAgents">-</div>
+          <div class="stat-label">Active</div>
+        </div>
+      </div>
+      
+      <h3 style="margin-top: 20px;">ℹ️ Quick Actions</h3>
+      <button class="btn" onclick="viewAllSessions()" style="width: 100%; margin-bottom: 8px;">📋 View All Sessions</button>
+      <button class="btn" onclick="clearLogs()" style="width: 100%;">🗑️ Clear Logs</button>
     </div>
-  </div>
-
-  <div class="panel">
-    <h3>🚀 Agent starten</h3>
-    <div>
-      <button class="btn" onclick="alert('Kate: CSV/Daten-Analyse')">🚀 Kate (Data Analyst)</button>
-      <button class="btn" onclick="alert('Samantha: API Integration')">🚀 Samantha (API Execution)</button>
-      <button class="btn" onclick="alert('Theresa: Web Research')">🚀 Theresa (Browser Research)</button>
-      <button class="btn" onclick="alert('Kari: Shopify Tasks')">🚀 Kari (Shopify Clerk)</button>
-    </div>
-    <div class="hint" style="margin-top:10px">
-      CLI: <code>openclaw spawn <agent-id> "<task>"</code>
-    </div>
-  </div>
-
-  <div class="panel">
-    <h3>📋 Nützliche Commands</h3>
-    <div class="commands">
-# Alle Sessions anzeigen
-openclaw sessions list
-
-# Agent-Status prüfen
-openclaw subagents list
-
-# Session-History ansehen
-openclaw sessions history <session-key>
-
-# Agenten monitor (lokal)
-python3 /data/workspace/cockpit/agents/monitor.py
+    
+    <div class="panel content">
+      <div id="message"></div>
+      
+      <h3>🤖 Agents</h3>
+      <div class="agent-grid" id="agentGrid">
+        <div class="loading">Loading agents...</div>
+      </div>
+      
+      <div class="log-panel" id="logPanel" style="display: none;">
+        <h4>📝 Activity Log</h4>
+        <div id="logContent"></div>
+      </div>
     </div>
   </div>
 
   <script>
-    // Agent-Daten (könnte später dynamisch geladen werden)
-    const agents = [
-      { id: 'nana', name: 'Nana', role: 'Orchestrator', model: 'gpt-5.3-codex', status: 'active', desc: 'Haupt-Agent und first point of contact' },
-      { id: 'kate', name: 'Kate', role: 'Data Analyst', model: 'gpt-5.3-codex', status: 'idle', desc: 'Python Expert & Datenanalyse' },
-      { id: 'kari', name: 'Kari', role: 'Shopify Clerk', model: 'openrouter/auto', status: 'idle', desc: 'Shopify UI/Clerk-Tasks' },
-      { id: 'samantha', name: 'Samantha', role: 'API Execution', model: 'gpt-5.3-codex', status: 'idle', desc: 'API-first Execution Agent' },
-      { id: 'theresa', name: 'Theresa', role: 'Browser Research', model: 'openrouter/auto', status: 'idle', desc: 'Web-Research & Data Extraction' },
-      { id: 'cassandra', name: 'Cassandra', role: 'TBD', model: 'openrouter/auto', status: 'idle', desc: 'Rolle noch nicht definiert' },
-      { id: 'marta', name: 'Marta', role: 'TBD', model: 'openrouter/auto', status: 'idle', desc: 'Rolle noch nicht definiert' }
-    ];
-
-    const grid = document.getElementById('agentGrid');
-    agents.forEach(agent => {
-      const statusClass = 'status-' + agent.status;
-      grid.innerHTML += `
-        <div class="agentCard">
-          <h3>${agent.name}</h3>
-          <span class="status-badge ${statusClass}">${agent.status.toUpperCase()}</span>
-          <div class="meta"><strong>Rolle:</strong> ${agent.role}</div>
-          <div class="meta"><strong>Modell:</strong> ${agent.model}</div>
-          <div class="meta">${agent.desc}</div>
+    let apiKey = localStorage.getItem('cockpit_api_key') || '';
+    let agents = [];
+    let logs = [];
+    
+    document.getElementById('apiKey').value = apiKey;
+    
+    function saveApiKey() {
+      apiKey = document.getElementById('apiKey').value;
+      localStorage.setItem('cockpit_api_key', apiKey);
+      showMessage('API Key saved!', 'success');
+      refreshAgents();
+    }
+    
+    function showMessage(text, type) {
+      const msg = document.getElementById('message');
+      msg.innerHTML = `<div class="${type}">${text}</div>`;
+      setTimeout(() => msg.innerHTML = '', 5000);
+    }
+    
+    async function apiCall(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+          ...options.headers
+        }
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err);
+      }
+      return res.json();
+    }
+    
+    async function refreshAgents() {
+      try {
+        const data = await apiCall('/api/agents/list');
+        agents = data.agents || [];
+        renderAgents(agents);
+        updateStats(agents);
+      } catch (err) {
+        showMessage('Error loading agents: ' + err.message, 'error');
+      }
+    }
+    
+    function renderAgents(agentList) {
+      const grid = document.getElementById('agentGrid');
+      
+      if (agentList.length === 0) {
+        grid.innerHTML = '<div class="loading">No agents found</div>';
+        return;
+      }
+      
+      grid.innerHTML = agentList.map(agent => {
+        const statusClass = `status-${agent.status || 'idle'}`;
+        const avatar = agent.portrait || `https://ui-avatars.com/api/?name=${agent.name}&background=random`;
+        
+        return `
+          <div class="agent-card">
+            <div class="agent-header">
+              <img src="${avatar}" alt="${agent.name}" class="agent-avatar">
+              <div class="agent-title">
+                <div class="agent-name">${agent.name}</div>
+                <div class="agent-role">${agent.role || 'No role'}</div>
+              </div>
+              <span class="status-badge ${statusClass}">${agent.status || 'idle'}</span>
+            </div>
+            <div class="agent-meta">
+              Model: ${agent.model || 'N/A'} | Workspace: ${agent.workspace || 'N/A'}<br>
+              ${agent.description || ''}
+            </div>
+            <div class="spawn-panel">
+              <textarea 
+                class="task-input" 
+                id="task-${agent.id}" 
+                placeholder="Enter task for ${agent.name}..."></textarea>
+              <div class="agent-actions">
+                <button class="btn success" onclick="spawnAgent('${agent.id}')">🚀 Spawn</button>
+                <button class="btn" onclick="viewLogs('${agent.id}')">📋 Logs</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function updateStats(agentList) {
+      document.getElementById('totalAgents').textContent = agentList.length;
+      const active = agentList.filter(a => a.status === 'active' || a.status === 'busy').length;
+      document.getElementById('activeAgents').textContent = active;
+    }
+    
+    async function spawnAgent(agentId) {
+      const taskInput = document.getElementById(`task-${agentId}`);
+      const task = taskInput.value.trim();
+      
+      if (!task) {
+        showMessage('Please enter a task!', 'error');
+        return;
+      }
+      
+      try {
+        addLog(`Spawning ${agentId} with task: ${task.substring(0, 50)}...`, 'info');
+        
+        const data = await apiCall('/api/agents/spawn', {
+          method: 'POST',
+          body: JSON.stringify({ agentId, task })
+        });
+        
+        showMessage(`${agentId} spawned successfully!`, 'success');
+        addLog(`${agentId} spawned: ${data.output || 'OK'}`, 'info');
+        taskInput.value = '';
+        
+        // Refresh after a delay
+        setTimeout(refreshAgents, 3000);
+      } catch (err) {
+        showMessage('Spawn error: ' + err.message, 'error');
+        addLog(`Error spawning ${agentId}: ${err.message}`, 'error');
+      }
+    }
+    
+    async function viewLogs(agentId) {
+      try {
+        addLog(`Fetching logs for ${agentId}...`, 'info');
+        const data = await apiCall(`/api/agents/${agentId}/logs`);
+        
+        const sessions = data.sessions || [];
+        if (sessions.length === 0) {
+          addLog(`No recent sessions for ${agentId}`, 'info');
+          return;
+        }
+        
+        addLog(`${agentId} has ${sessions.length} recent sessions`, 'info');
+        sessions.forEach(s => {
+          addLog(`  - ${s.sessionKey} (${s.status || 'unknown'})`, 'info');
+        });
+      } catch (err) {
+        addLog(`Error fetching logs: ${err.message}`, 'error');
+      }
+    }
+    
+    async function viewAllSessions() {
+      try {
+        addLog('Fetching all sessions...', 'info');
+        const data = await apiCall('/api/sessions/active');
+        
+        const sessions = data.sessions || [];
+        addLog(`Found ${sessions.length} sessions`, 'info');
+        
+        sessions.slice(0, 10).forEach(s => {
+          addLog(`  - ${s.sessionKey || s.displayName} (${s.model || 'N/A'})`, 'info');
+        });
+      } catch (err) {
+        addLog(`Error: ${err.message}`, 'error');
+      }
+    }
+    
+    function addLog(message, type) {
+      const now = new Date().toLocaleTimeString();
+      logs.push({ time: now, message, type });
+      
+      // Keep only last 50 logs
+      if (logs.length > 50) logs.shift();
+      
+      renderLogs();
+    }
+    
+    function renderLogs() {
+      const panel = document.getElementById('logPanel');
+      const content = document.getElementById('logContent');
+      
+      if (logs.length > 0) {
+        panel.style.display = 'block';
+      }
+      
+      content.innerHTML = logs.map(log => `
+        <div class="log-entry">
+          <span class="log-time">${log.time}</span>
+          <span class="log-${log.type}">${log.message}</span>
         </div>
-      `;
-    });
+      `).join('');
+      
+      // Auto-scroll to bottom
+      content.scrollTop = content.scrollHeight;
+    }
+    
+    function clearLogs() {
+      logs = [];
+      document.getElementById('logPanel').style.display = 'none';
+    }
+    
+    // Initial load
+    refreshAgents();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(refreshAgents, 30000);
   </script>
 </body>
 </html>

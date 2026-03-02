@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>File Manager | OpenClaw Cockpit</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Inter, system-ui, Arial, sans-serif;
+      background: #0b1020;
+      color: #e8ecff;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      background: #121a33;
+      border-bottom: 1px solid #2c3a6f;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 18px;
+      color: #00d4ff;
+    }
+    .nav {
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      cursor: pointer;
+      border: 1px solid #3a4a84;
+      background: #121a33;
+      color: #e8ecff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .btn:hover {
+      background: #1c2750;
+    }
+    .btn.primary {
+      background: #24407a;
+      border-color: #6ea6ff;
+    }
+    .btn.danger {
+      border-color: #994455;
+      color: #ff8a8a;
+    }
+    
+    .main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      padding: 20px;
+      gap: 20px;
+    }
+    
+    .panel {
+      background: #111831;
+      border: 1px solid #2c3a6f;
+      border-radius: 12px;
+      padding: 20px;
+      overflow: auto;
+    }
+    
+    .sidebar {
+      width: 280px;
+    }
+    
+    .content {
+      flex: 1;
+    }
+    
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #2c3a6f;
+      font-size: 14px;
+    }
+    .breadcrumb button {
+      background: none;
+      border: none;
+      color: #00d4ff;
+      cursor: pointer;
+      padding: 0;
+    }
+    .breadcrumb button:hover {
+      text-decoration: underline;
+    }
+    
+    .upload-zone {
+      border: 2px dashed #3a4a84;
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      margin-bottom: 20px;
+      transition: all 0.2s;
+    }
+    .upload-zone.dragover {
+      border-color: #00d4ff;
+      background: #121a33;
+    }
+    .upload-zone input {
+      display: none;
+    }
+    
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: #0b1228;
+      border: 1px solid #24305e;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .file-item:hover {
+      background: #121a33;
+    }
+    .file-item.selected {
+      border-color: #00d4ff;
+      background: #1c2750;
+    }
+    
+    .file-icon {
+      font-size: 24px;
+      width: 40px;
+      text-align: center;
+    }
+    
+    .file-info {
+      flex: 1;
+    }
+    .file-name {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .file-meta {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+    
+    .file-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .preview-panel {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #2c3a6f;
+    }
+    .preview-panel h3 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: #00d4ff;
+    }
+    .preview-content {
+      background: #0b1228;
+      border: 1px solid #24305e;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: 'SF Mono', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow: auto;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      opacity: 0.7;
+    }
+    
+    .error {
+      background: #3a2430;
+      border: 1px solid #994455;
+      color: #ff8a8a;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    
+    .success {
+      background: #1c3f2e;
+      border: 1px solid #3d7b52;
+      color: #2ecc71;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 10px 0;
+    }
+    
+    .api-key-input {
+      width: 100%;
+      background: #0b1228;
+      border: 1px solid #3a4a84;
+      color: #e8ecff;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📁 File Manager</h1>
+    <div class="nav">
+      <a href="./index.html" class="btn">← Dashboard</a>
+      <a href="./console.html" class="btn">💻 Console</a>
+      <a href="./agents.html" class="btn">🤖 Agents</a>
+    </div>
+  </div>
+  
+  <div class="main">
+    <div class="panel sidebar">
+      <h3>⚙️ Settings</h3>
+      <label>API Key:</label>
+      <input type="password" id="apiKey" class="api-key-input" placeholder="COCKPIT_API_KEY">
+      <button class="btn primary" onclick="saveApiKey()" style="width: 100%; margin-bottom: 20px;">Save Key</button>
+      
+      <h3>📊 Stats</h3>
+      <div id="stats">Loading...</div>
+      
+      <h3 style="margin-top: 20px;">ℹ️ Info</h3>
+      <div style="font-size: 12px; opacity: 0.8;">
+        • Max file size: 40MB<br>
+        • Text preview: < 1MB<br>
+        • Drag & drop supported
+      </div>
+    </div>
+    
+    <div class="panel content">
+      <div class="breadcrumb" id="breadcrumb">
+        <button onclick="navigateTo('/data/workspace')">workspace</button>
+        <span>/</span>
+      </div>
+      
+      <div class="upload-zone" id="uploadZone">
+        <div style="font-size: 48px; margin-bottom: 10px;">📤</div>
+        <p>Drag & drop files here or click to browse</p>
+        <input type="file" id="fileInput" onchange="handleFileSelect(event)">
+        <button class="btn primary" onclick="document.getElementById('fileInput').click()">Select File</button>
+      </div>
+      
+      <div id="message"></div>
+      
+      <div class="file-list" id="fileList">
+        <div class="loading">Loading files...</div>
+      </div>
+      
+      <div class="preview-panel" id="previewPanel" style="display: none;">
+        <h3>👁️ Preview</h3>
+        <div id="previewContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const WORKSPACE = '/data/workspace';
+    let currentPath = WORKSPACE;
+    let apiKey = localStorage.getItem('cockpit_api_key') || '';
+    
+    document.getElementById('apiKey').value = apiKey;
+    
+    function saveApiKey() {
+      apiKey = document.getElementById('apiKey').value;
+      localStorage.setItem('cockpit_api_key', apiKey);
+      showMessage('API Key saved!', 'success');
+    }
+    
+    function showMessage(text, type) {
+      const msg = document.getElementById('message');
+      msg.innerHTML = `<div class="${type}">${text}</div>`;
+      setTimeout(() => msg.innerHTML = '', 5000);
+    }
+    
+    async function apiCall(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'X-API-Key': apiKey,
+          ...options.headers
+        }
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err);
+      }
+      return res.json();
+    }
+    
+    async function loadFiles(path = WORKSPACE) {
+      try {
+        const data = await apiCall(`/api/files/list?path=${encodeURIComponent(path)}`);
+        currentPath = path;
+        renderBreadcrumb(path);
+        renderFileList(data.files);
+        updateStats(data.files);
+      } catch (err) {
+        showMessage('Error: ' + err.message, 'error');
+      }
+    }
+    
+    function renderBreadcrumb(path) {
+      const parts = path.replace(WORKSPACE, '').split('/').filter(Boolean);
+      let html = `<button onclick="navigateTo('${WORKSPACE}')">workspace</button>`;
+      let current = WORKSPACE;
+      
+      for (const part of parts) {
+        current += '/' + part;
+        html += ` <span>/</span> <button onclick="navigateTo('${current}')">${part}</button>`;
+      }
+      
+      document.getElementById('breadcrumb').innerHTML = html;
+    }
+    
+    function navigateTo(path) {
+      loadFiles(path);
+    }
+    
+    function renderFileList(files) {
+      const list = document.getElementById('fileList');
+      
+      if (files.length === 0) {
+        list.innerHTML = '<div class="loading">No files in this directory</div>';
+        return;
+      }
+      
+      // Sort: directories first, then files
+      files.sort((a, b) => {
+        if (a.type === b.type) return a.name.localeCompare(b.name);
+        return a.type === 'directory' ? -1 : 1;
+      });
+      
+      list.innerHTML = files.map(file => {
+        const icon = file.type === 'directory' ? '📁' : getFileIcon(file.name);
+        const size = file.type === 'directory' ? '--' : formatSize(file.size);
+        const date = new Date(file.modified).toLocaleString();
+        
+        return `
+          <div class="file-item" onclick="${file.type === 'directory' ? `navigateTo('${file.path}')` : `previewFile('${file.path}')`}">
+            <div class="file-icon">${icon}</div>
+            <div class="file-info">
+              <div class="file-name">${file.name}</div>
+              <div class="file-meta">${size} • ${date}</div>
+            </div>
+            <div class="file-actions" onclick="event.stopPropagation()">
+              ${file.type !== 'directory' ? `<button class="btn" onclick="downloadFile('${file.path}')">⬇️</button>` : ''}
+              <button class="btn danger" onclick="deleteFile('${file.path}')">🗑️</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function getFileIcon(filename) {
+      const ext = filename.split('.').pop().toLowerCase();
+      const icons = {
+        js: '📜', json: '📋', md: '📝', txt: '📄',
+        html: '🌐', css: '🎨', py: '🐍', sh: '⚡',
+        yml: '⚙️', yaml: '⚙️', dockerfile: '🐳',
+        gitignore: '🙈', env: '🔐', log: '📋',
+        csv: '📊', pdf: '📕', zip: '📦', tar: '📦',
+        jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', svg: '🖼️'
+      };
+      return icons[ext] || '📄';
+    }
+    
+    function formatSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function updateStats(files) {
+      const dirs = files.filter(f => f.type === 'directory').length;
+      const fileCount = files.filter(f => f.type === 'file').length;
+      const totalSize = files.filter(f => f.type === 'file').reduce((sum, f) => sum + f.size, 0);
+      
+      document.getElementById('stats').innerHTML = `
+        📁 Directories: ${dirs}<br>
+        📄 Files: ${fileCount}<br>
+        💾 Total size: ${formatSize(totalSize)}
+      `;
+    }
+    
+    async function previewFile(path) {
+      try {
+        const data = await apiCall(`/api/files/content/${path.replace(WORKSPACE + '/', '')}`);
+        document.getElementById('previewPanel').style.display = 'block';
+        document.getElementById('previewContent').innerHTML = `<div class="preview-content">${escapeHtml(data.content)}</div>`;
+      } catch (err) {
+        showMessage('Cannot preview: ' + err.message, 'error');
+      }
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function downloadFile(path) {
+      const relativePath = path.replace(WORKSPACE + '/', '');
+      window.open(`/api/files/download/${relativePath}?key=${apiKey}`, '_blank');
+    }
+    
+    async function deleteFile(path) {
+      if (!confirm('Are you sure you want to delete this?')) return;
+      
+      try {
+        const relativePath = path.replace(WORKSPACE + '/', '');
+        await apiCall(`/api/files/${relativePath}`, { method: 'DELETE' });
+        showMessage('File deleted!', 'success');
+        loadFiles(currentPath);
+      } catch (err) {
+        showMessage('Error: ' + err.message, 'error');
+      }
+    }
+    
+    async function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      try {
+        const res = await fetch(`/api/files/upload?path=${encodeURIComponent(currentPath)}`, {
+          method: 'POST',
+          headers: { 'X-API-Key': apiKey },
+          body: formData
+        });
+        
+        if (!res.ok) throw new Error(await res.text());
+        
+        showMessage('File uploaded successfully!', 'success');
+        loadFiles(currentPath);
+      } catch (err) {
+        showMessage('Upload error: ' + err.message, 'error');
+      }
+    }
+    
+    // Drag and drop
+    const uploadZone = document.getElementById('uploadZone');
+    
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        document.getElementById('fileInput').files = files;
+        handleFileSelect({ target: { files } });
+      }
+    });
+    
+    // Initial load
+    loadFiles();
+  </script>
+</body>
+</html>
