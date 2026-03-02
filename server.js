@@ -12,10 +12,9 @@ const fs = require('fs').promises;
 const fsSync = require('fs');
 const cors = require('cors');
 const multer = require('multer');
-const { exec } = require('child_process');
-const { promisify } = require('util');
 
-const execAsync = promisify(exec);
+// Dynamic import for fetch (Node 18+)
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 const app = express();
 const server = http.createServer(app);
@@ -263,45 +262,104 @@ app.get('/api/agents/list', requireAuth, (req, res) => {
   res.json(registry);
 });
 
-// Spawn agent (simulated - openclaw not available in container)
+// Spawn agent via internal Railway networking
 app.post('/api/agents/spawn', requireAuth, async (req, res) => {
-  const { agentId, task } = req.body;
-  
-  if (!agentId || !task) {
-    return res.status(400).json({ error: 'agentId and task required' });
+  try {
+    const { agentId, task } = req.body;
+    
+    if (!agentId || !task) {
+      return res.status(400).json({ error: 'agentId and task required' });
+    }
+
+    // Use Railway internal networking
+    const INTERNAL_URL = process.env.OPENCLAW_INTERNAL_URL || 
+                         'https://clawdbot-railway-template.up.railway.app';
+    
+    console.log(`🔗 Spawning via internal: ${INTERNAL_URL}/api/agents/spawn`);
+    
+    const response = await fetch(`${INTERNAL_URL}/api/agents/spawn`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': API_KEY
+      },
+      body: JSON.stringify({ agentId, task })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Internal service error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    res.json({ 
+      success: true, 
+      agentId, 
+      task,
+      internal: true,
+      response: data
+    });
+  } catch (err) {
+    console.error('Spawn error:', err);
+    // Fallback to simulation
+    res.json({ 
+      success: true, 
+      agentId, 
+      task,
+      simulated: true,
+      error: err.message
+    });
   }
-
-  // In container mode, we can't spawn real agents
-  res.json({ 
-    success: true, 
-    agentId, 
-    task,
-    note: 'Agent spawn simulated (container mode). In production, this would execute: openclaw spawn ' + agentId,
-    container: true
-  });
 });
 
-// Get agent logs (simulated)
+// Get agent logs via internal service
 app.get('/api/agents/:agentId/logs', requireAuth, async (req, res) => {
-  const { agentId } = req.params;
-  
-  // Simulated logs
-  res.json({ 
-    agentId, 
-    container: true,
-    note: 'Logs not available in container mode',
-    sessions: []
-  });
+  try {
+    const { agentId } = req.params;
+    const INTERNAL_URL = process.env.OPENCLAW_INTERNAL_URL || 
+                         'https://clawdbot-railway-template.up.railway.app';
+    
+    const response = await fetch(`${INTERNAL_URL}/api/agents/${agentId}/logs`, {
+      headers: { 'X-API-Key': API_KEY }
+    });
+    
+    if (!response.ok) throw new Error('Internal service error');
+    
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Logs error:', err);
+    res.json({ 
+      agentId, 
+      simulated: true,
+      error: err.message,
+      sessions: []
+    });
+  }
 });
 
-// Get active sessions (simulated)
+// Get active sessions via internal service
 app.get('/api/sessions/active', requireAuth, async (req, res) => {
-  res.json({ 
-    container: true,
-    note: 'Sessions not available in container mode',
-    sessions: [],
-    count: 0 
-  });
+  try {
+    const INTERNAL_URL = process.env.OPENCLAW_INTERNAL_URL || 
+                         'https://clawdbot-railway-template.up.railway.app';
+    
+    const response = await fetch(`${INTERNAL_URL}/api/sessions/active`, {
+      headers: { 'X-API-Key': API_KEY }
+    });
+    
+    if (!response.ok) throw new Error('Internal service error');
+    
+    const data = await response.json();
+    res.json(data);
+  } catch (err) {
+    console.error('Sessions error:', err);
+    res.json({ 
+      simulated: true,
+      error: err.message,
+      sessions: [],
+      count: 0 
+    });
+  }
 });
 
 // ==================== BASIC ROUTES ====================
