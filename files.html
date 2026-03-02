@@ -280,8 +280,74 @@
     const WORKSPACE = '/data/workspace';
     let currentPath = WORKSPACE;
     let apiKey = localStorage.getItem('cockpit_api_key') || '';
+    let ws = null;
+    let wsReconnectTimer = null;
+    let lastUpdate = null;
     
     document.getElementById('apiKey').value = apiKey;
+    
+    // ==================== WEBSOCKET FILE SYNC ====================
+    function connectFileSync() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/files`;
+      
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log('🔌 File sync connected');
+        showMessage('🔄 Live sync enabled', 'success');
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleFileSyncEvent(data);
+        } catch (err) {
+          console.error('WebSocket message error:', err);
+        }
+      };
+      
+      ws.onclose = () => {
+        console.log('🔌 File sync disconnected, retrying in 3s...');
+        clearTimeout(wsReconnectTimer);
+        wsReconnectTimer = setTimeout(connectFileSync, 3000);
+      };
+      
+      ws.onerror = (err) => {
+        console.error('WebSocket error:', err);
+      };
+    }
+    
+    function handleFileSyncEvent(data) {
+      if (data.type === 'connected') return;
+      if (data.type !== 'file-change') return;
+      
+      // Debounced refresh - only reload if last >500ms ago
+      const now = Date.now();
+      if (lastUpdate && now - lastUpdate < 500) return;
+      lastUpdate = now;
+      
+      // Show notification about the change
+      const filename = data.path.split('/').pop();
+      const events = {
+        'add': '📄 File added',
+        'change': '📝 File changed', 
+        'unlink': '🗑️ File deleted',
+        'unlinkDir': '📁 Folder deleted',
+        'addDir': '📁 Folder created'
+      };
+      
+      const msg = events[data.event] || 'File updated';
+      showMessage(`${msg}: ${filename}`, 'success');
+      
+      // Smart refresh - reload if current directory is affected
+      if (data.path.startsWith(currentPath)) {
+        loadFiles(currentPath);
+      }
+    }
+    
+    // Start WebSocket connection
+    connectFileSync();
     
     function saveApiKey() {
       apiKey = document.getElementById('apiKey').value;

@@ -12,6 +12,7 @@ const fs = require('fs').promises;
 const fsSync = require('fs');
 const cors = require('cors');
 const multer = require('multer');
+const chokidar = require('chokidar');
 
 // Dynamic import for fetch (Node 18+)
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
@@ -19,6 +20,7 @@ const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: '/terminal' });
+const fileWss = new WebSocket.Server({ server, path: '/files' });
 
 // Config
 const PORT = process.env.PORT || 3000;
@@ -422,12 +424,93 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal Server Error' });
 });
 
-// Start Server
+// ==================== FILE SYNC (WebSocket) ====================
+
+// Track file WebSocket clients
+const fileClients = new Set();
+
+// File WebSocket endpoint for real-time sync
+fileWss.on('connection', (ws, req) => {
+  const clientIp = req.socket.remoteAddress;
+  console.log(`📂 File sync client connected from ${clientIp}`);
+  fileClients.add(ws);
+
+  ws.send(JSON.stringify({ type: 'connected', message: 'File sync enabled' }));
+
+  ws.on('close', () => {
+    console.log('📂 File sync client disconnected');
+    fileClients.delete(ws);
+  });
+
+  ws.on('error', (err) => {
+    console.error('File sync WebSocket error:', err);
+    fileClients.delete(ws);
+  });
+});
+
+// Broadcast file change to all connected clients
+function broadcastFileChange(eventType, filePath, data = null) {
+  const message = {
+    type: 'file-change',
+    event: eventType,  // 'add', 'change', 'unlink', 'unlinkDir'
+    path: filePath,
+    timestamp: new Date().toISOString(),
+    data: data
+  };
+  
+  const payload = JSON.stringify(message);
+  let sent = 0;
+  
+  fileClients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+      sent++;
+    }
+  });
+  
+  if (sent > 0) {
+    console.log(`📡 Broadcasted ${eventType}: ${path.basename(filePath)} to ${sent} client(s)`);
+  }
+}
+
+// Initialize file watcher with chokidar
+// Ignore node_modules, .git, and temp files
+const watcher = chokidar.watch(WORKSPACE, {
+  ignored: [
+    '**/node_modules/**',
+    '**/.git/**',
+    '**/.DS_Store',
+    '**/*.tmp',
+    '**/*~'
+  ],
+  persistent: true,
+  ignoreInitial: true,
+  awaitWriteFinish: {
+    stabilityThreshold: 300,
+    pollInterval: 100
+  }
+});
+
+// File system events
+watcher
+  .on('add', filePath => broadcastFileChange('add', filePath))
+  .on('change', filePath => broadcastFileChange('change', filePath))
+  .on('unlink', filePath => broadcastFileChange('unlink', filePath))
+  .on('unlinkDir', dirPath => broadcastFileChange('unlinkDir', dirPath))
+  .on('addDir', dirPath => broadcastFileChange('addDir', dirPath))
+  .on('error', error => console.error('⚠️ Watcher error:', error))
+  .on('ready', () => console.log('👁️  File watcher ready'));
+
+console.log(`👁️  Watching ${WORKSPACE} for changes...`);
+
+// ==================== START SERVER ====================
+
 server.listen(PORT, () => {
   console.log(`🎮 Cockpit Backend running on port ${PORT}`);
   console.log(`📁 Workspace: ${WORKSPACE}`);
   console.log(`🔌 Terminal: ws://localhost:${PORT}/terminal`);
-  console.log(`📡 API Endpoints:`);
+  console.log(`📡 File Sync: ws://localhost:${PORT}/files`);
+  console.log(`🔄 API Endpoints:`);
   console.log(`   - Files: /api/files/*`);
   console.log(`   - Agents: /api/agents/*`);
   console.log(`   - Health: /api/health`);
