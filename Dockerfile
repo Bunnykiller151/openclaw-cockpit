@@ -20,8 +20,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (use npm install for flexibility with updated deps)
+RUN npm install
 
 # Copy app files
 COPY . .
