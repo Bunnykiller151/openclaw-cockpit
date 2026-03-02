@@ -202,6 +202,34 @@ http.createServer(async (req, res) => {
     }
   }
 
+  // Reorder items
+  if (method === 'POST' && (pathname === '/api/reorder' || pathname === '/openclaw/cockpit/api/reorder')) {
+    if (!requireApiKey(req, res)) return;
+    try {
+      const board = getBoardFromUrl(rawUrl);
+      const payload = JSON.parse(await readBody(req));
+      const order = Array.isArray(payload?.order) ? payload.order.map(String) : [];
+      if (!order.length) return sendJson(res, 400, { ok: false, error: 'order[] required' });
+
+      const data = readBoard(board);
+      const map = new Map((data.items || []).map(i => [String(i.id), i]));
+      const reordered = [];
+      for (const id of order) {
+        const item = map.get(id);
+        if (item) reordered.push(item);
+      }
+      for (const item of (data.items || [])) {
+        if (!order.includes(String(item.id))) reordered.push(item);
+      }
+      data.items = reordered;
+      data.generated_at = nowIso();
+      writeBoard(board, data);
+      return sendJson(res, 200, { ok: true, board, count: data.items.length });
+    } catch (err) {
+      return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
+    }
+  }
+
   // Partial item update (single card)
   const itemMatch = pathname.match(/^\/(?:openclaw\/cockpit\/)?api\/item\/([^/]+)$/);
   if (method === 'PATCH' && itemMatch) {

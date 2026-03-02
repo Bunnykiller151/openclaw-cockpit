@@ -28,6 +28,11 @@
     .stale{color:#ffb3b3}
 
     .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+    .kanban{display:none;grid-template-columns:repeat(3,minmax(260px,1fr));gap:12px}
+    .col{background:#10162b;border:1px solid #24305e;border-radius:12px;padding:10px}
+    .col h3{margin:0 0 8px;font-size:14px}
+    .dropzone{min-height:80px;display:flex;flex-direction:column;gap:10px}
+    .dragging{opacity:.6}
     .card{background:#121a33;border:1px solid #24305e;border-radius:14px;padding:14px}
     .meta{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
     .pill{padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #3a4a84}
@@ -54,6 +59,8 @@
   <div class="controls">
     <button id="btn-strategy" class="btn">Strategy</button>
     <button id="btn-today" class="btn">Today</button>
+    <button id="view-list" class="btn">List</button>
+    <button id="view-kanban" class="btn">Kanban</button>
   </div>
 
   <div class="panel">
@@ -77,12 +84,18 @@
     <button class="chip" data-filter="in_progress">Nur in_progress</button>
   </div>
   <div id="grid" class="grid"></div>
+  <div id="kanban" class="kanban">
+    <section class="col"><h3>TODO</h3><div class="dropzone" data-status="todo"></div></section>
+    <section class="col"><h3>IN PROGRESS</h3><div class="dropzone" data-status="in_progress"></div></section>
+    <section class="col"><h3>DONE</h3><div class="dropzone" data-status="done"></div></section>
+  </div>
 
   <script>
     const statusLabel = s => ({todo:'TODO',in_progress:'IN PROGRESS',done:'DONE'}[s] || s);
     const agentStatusLabel = s => ({online:'Online',busy:'Busy',idle:'Idle',offline:'Offline'}[s] || s);
     let board = localStorage.getItem('cockpit_board') || 'strategy';
     let filter = localStorage.getItem('cockpit_filter') || 'all';
+    let viewMode = localStorage.getItem('cockpit_view') || 'list';
     let apiKey = localStorage.getItem('cockpit_api_key') || '';
     let lastRefreshTs = null;
 
@@ -110,8 +123,12 @@
     function updateButtons(){
       document.getElementById('btn-strategy').classList.toggle('active', board === 'strategy');
       document.getElementById('btn-today').classList.toggle('active', board === 'today');
+      document.getElementById('view-list').classList.toggle('active', viewMode === 'list');
+      document.getElementById('view-kanban').classList.toggle('active', viewMode === 'kanban');
       document.getElementById('focusLabel').textContent = `Board: ${board}`;
       document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.filter === filter));
+      document.getElementById('grid').style.display = viewMode === 'list' ? 'grid' : 'none';
+      document.getElementById('kanban').style.display = viewMode === 'kanban' ? 'grid' : 'none';
     }
 
     function applyFilter(items){
@@ -184,6 +201,38 @@
       lastRefreshTs = Date.now();
     }
 
+    async function saveOrderFromDom(){
+      if(!apiKey) return;
+      const ids = [...document.querySelectorAll('[data-item-id]')].map(el => el.dataset.itemId).filter(Boolean);
+      if(!ids.length) return;
+      await fetch(`/api/reorder?board=${board}`, {
+        method:'POST',
+        headers:{'content-type':'application/json','x-api-key':apiKey},
+        body: JSON.stringify({ order: ids })
+      });
+    }
+
+    function cardHtml(it){
+      return `
+          <article class="card" draggable="true" data-item-id="${it.id}">
+            <h3>${it.id || '-'} · ${it.title || 'Ohne Titel'}</h3>
+            <div class="meta">
+              <span class="pill ${it.priority || ''}">${it.priority || '-'}</span>
+              <span class="pill ${it.status || ''}">${statusLabel(it.status || '-')}</span>
+              <span class="pill">Owner: ${it.owner || '-'}</span>
+            </div>
+            <p><strong>Nächster Schritt:</strong> ${it.next_step || '-'}</p>
+            <p><strong>Blocker:</strong> ${it.blocker || '-'}</p>
+            <p class="tiny">Zuletzt geändert: ${formatTime(it.updated_at)}</p>
+            <div class="quick">
+              <button class="mini todoBtn" data-item="${it.id}" data-status="todo">todo</button>
+              <button class="mini progressBtn" data-item="${it.id}" data-status="in_progress">in_progress</button>
+              <button class="mini doneBtn" data-item="${it.id}" data-status="done">done</button>
+            </div>
+          </article>
+      `;
+    }
+
     async function render() {
       try {
         const res = await fetch(boardFile(board) + '?_=' + Date.now(), { cache: 'no-store' });
@@ -207,26 +256,37 @@
           `;
         }).join('');
 
-        const grid = document.getElementById('grid');
         const filtered = applyFilter(data.items || []);
-        grid.innerHTML = filtered.map(it => `
-          <article class="card">
-            <h3>${it.id || '-'} · ${it.title || 'Ohne Titel'}</h3>
-            <div class="meta">
-              <span class="pill ${it.priority || ''}">${it.priority || '-'}</span>
-              <span class="pill ${it.status || ''}">${statusLabel(it.status || '-')}</span>
-              <span class="pill">Owner: ${it.owner || '-'}</span>
-            </div>
-            <p><strong>Nächster Schritt:</strong> ${it.next_step || '-'}</p>
-            <p><strong>Blocker:</strong> ${it.blocker || '-'}</p>
-            <p class="tiny">Zuletzt geändert: ${formatTime(it.updated_at)}</p>
-            <div class="quick">
-              <button class="mini todoBtn" data-item="${it.id}" data-status="todo">todo</button>
-              <button class="mini progressBtn" data-item="${it.id}" data-status="in_progress">in_progress</button>
-              <button class="mini doneBtn" data-item="${it.id}" data-status="done">done</button>
-            </div>
-          </article>
-        `).join('');
+        const grid = document.getElementById('grid');
+        grid.innerHTML = filtered.map(cardHtml).join('');
+
+        const zones = [...document.querySelectorAll('.dropzone')];
+        zones.forEach(z => z.innerHTML = '');
+        filtered.forEach(it => {
+          const zone = zones.find(z => z.dataset.status === (it.status || 'todo'));
+          if(zone){ zone.insertAdjacentHTML('beforeend', cardHtml(it)); }
+        });
+
+        let dragEl = null;
+        document.querySelectorAll('.card[draggable="true"]').forEach(card => {
+          card.addEventListener('dragstart', () => { dragEl = card; card.classList.add('dragging'); });
+          card.addEventListener('dragend', async () => { card.classList.remove('dragging'); await saveOrderFromDom(); });
+        });
+
+        document.querySelectorAll('.dropzone, #grid').forEach(zone => {
+          zone.addEventListener('dragover', (e) => e.preventDefault());
+          zone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            if(!dragEl) return;
+            zone.appendChild(dragEl);
+            const newStatus = zone.dataset.status;
+            if(newStatus){
+              await patchItemStatus(dragEl.dataset.itemId, newStatus);
+            } else {
+              await saveOrderFromDom();
+            }
+          });
+        });
 
         document.querySelectorAll('.mini').forEach(btn => {
           btn.addEventListener('click', async () => {
@@ -250,6 +310,18 @@
       localStorage.setItem('cockpit_board', board);
       updateButtons();
       render();
+    });
+
+    document.getElementById('view-list').addEventListener('click', () => {
+      viewMode = 'list';
+      localStorage.setItem('cockpit_view', viewMode);
+      updateButtons();
+    });
+
+    document.getElementById('view-kanban').addEventListener('click', () => {
+      viewMode = 'kanban';
+      localStorage.setItem('cockpit_view', viewMode);
+      updateButtons();
     });
 
     document.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
