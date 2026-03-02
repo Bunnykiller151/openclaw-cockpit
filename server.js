@@ -128,11 +128,16 @@ wss.on('connection', (ws, req) => {
 // List files
 app.get('/api/files/list', requireAuth, async (req, res) => {
   try {
-    const targetPath = req.query.path || WORKSPACE;
+    // Map /data/workspace to /app for container compatibility
+    let targetPath = req.query.path || WORKSPACE;
+    if ((targetPath === '/data/workspace' || targetPath.startsWith('/data/workspace/')) && WORKSPACE === '/app') {
+      targetPath = targetPath.replace('/data/workspace', '/app');
+    }
     
     // Security: Ensure path is within workspace
     if (!targetPath.startsWith(WORKSPACE)) {
-      return res.status(403).json({ error: 'Access denied' });
+      console.log(`Access denied: ${targetPath} not in ${WORKSPACE}`);
+      return res.status(403).json({ error: 'Access denied', path: targetPath, workspace: WORKSPACE });
     }
 
     const items = await fs.readdir(targetPath, { withFileTypes: true });
