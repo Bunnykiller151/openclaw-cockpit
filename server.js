@@ -51,6 +51,10 @@ app.use((req, res, next) => {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = req.query.path || WORKSPACE;
+    // Ensure directory exists
+    if (!fsSync.existsSync(uploadPath)) {
+      fsSync.mkdirSync(uploadPath, { recursive: true });
+    }
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
@@ -152,21 +156,31 @@ app.get('/api/files/list', requireAuth, async (req, res) => {
 });
 
 // Upload file
-app.post('/api/files/upload', requireAuth, upload.single('file'), (req, res) => {
-  try {
+app.post('/api/files/upload', requireAuth, (req, res) => {
+  upload.single('file')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      // Multer-specific error
+      console.error('Multer error:', err);
+      return res.status(400).json({ error: `Upload error: ${err.message}` });
+    } else if (err) {
+      // Other error
+      console.error('Upload error:', err);
+      return res.status(500).json({ error: `Upload failed: ${err.message}` });
+    }
+    
+    // Success
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
+    
+    console.log('File uploaded:', req.file.originalname, 'to', req.file.path);
     res.json({ 
       success: true, 
       file: req.file.originalname,
       size: req.file.size,
       path: req.file.path
     });
-  } catch (err) {
-    console.error('Upload error:', err);
-    res.status(500).json({ error: err.message });
-  }
+  });
 });
 
 // Download file
