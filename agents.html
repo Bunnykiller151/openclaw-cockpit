@@ -271,6 +271,53 @@
       border-radius: 8px;
       margin: 10px 0;
     }
+    
+    /* Live Agent Monitor Styles */
+    .session-info {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #2c3a6f;
+      color: #a3b4ff;
+      margin-top: 4px;
+    }
+    .session-info.idle {
+      background: #2d3748;
+      color: #a0aec0;
+    }
+    .model-info {
+      font-family: monospace;
+      font-size: 11px;
+      color: #00d4ff;
+    }
+    .activity-time {
+      font-size: 11px;
+      color: #f39c12;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .stat-box {
+      background: #0b1228;
+      border: 1px solid #2c3a6f;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #00d4ff;
+      margin-bottom: 4px;
+    }
+    .stat-label {
+      font-size: 11px;
+      opacity: 0.7;
+    }
   </style>
 </head>
 <body>
@@ -301,6 +348,17 @@
           <div class="stat-value" id="activeAgents">-</div>
           <div class="stat-label">Active</div>
         </div>
+        <div class="stat-box">
+          <div class="stat-value" id="idleAgents">-</div>
+          <div class="stat-label">Idle</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value" id="lastUpdated">-</div>
+          <div class="stat-label">Last Updated</div>
+        </div>
+      </div>
+      <div class="integration-note" style="margin-top: 10px; font-size: 12px; opacity: 0.7; color: #f39c12;">
+        <span id="integrationNote">Status: Loading...</span>
       </div>
       
       <h3 style="margin-top: 20px;">ℹ️ Quick Actions</h3>
@@ -361,10 +419,26 @@
     
     async function refreshAgents() {
       try {
-        const data = await apiCall('/api/agents/list');
+        const data = await apiCall('/api/agents/status');
         agents = data.agents || [];
         renderAgents(agents);
         updateStats(agents);
+        
+        // Update last updated timestamp
+        if (data.lastUpdated) {
+          const lastUpdatedEl = document.getElementById('lastUpdated');
+          if (lastUpdatedEl) {
+            lastUpdatedEl.textContent = new Date(data.lastUpdated).toLocaleTimeString();
+          }
+        }
+        
+        // Show integration status
+        if (data.integration === 'simulated') {
+          const integrationNote = document.getElementById('integrationNote');
+          if (integrationNote) {
+            integrationNote.textContent = 'Status: Simulated data (OpenClaw API integration pending)';
+          }
+        }
       } catch (err) {
         showMessage('Error loading agents: ' + err.message, 'error');
       }
@@ -379,21 +453,48 @@
       }
       
       grid.innerHTML = agentList.map(agent => {
-        const statusClass = `status-${agent.status || 'idle'}`;
+        // Use liveStatus if available, otherwise fallback to status
+        const liveStatus = agent.liveStatus || agent.status || 'idle';
+        const statusClass = `status-${liveStatus}`;
         const avatar = agent.portrait || `https://ui-avatars.com/api/?name=${agent.name}&background=random`;
         
+        // Format last activity time
+        let activityInfo = '';
+        if (agent.lastActivity) {
+          const lastActivity = new Date(agent.lastActivity);
+          const now = new Date();
+          const diffMinutes = Math.floor((now - lastActivity) / (1000 * 60));
+          
+          if (diffMinutes < 1) activityInfo = 'Just now';
+          else if (diffMinutes < 60) activityInfo = `${diffMinutes}m ago`;
+          else if (diffMinutes < 1440) activityInfo = `${Math.floor(diffMinutes / 60)}h ago`;
+          else activityInfo = `${Math.floor(diffMinutes / 1440)}d ago`;
+        }
+        
+        // Session info
+        const sessionInfo = agent.liveSession ? 
+          `<span class="session-info">Session: ${agent.liveSession}</span>` : 
+          `<span class="session-info idle">No active session</span>`;
+        
+        // Current model (live vs configured)
+        const modelInfo = agent.currentModel ? 
+          `Model: <span class="model-info">${agent.currentModel}</span>` : 
+          `Model: ${agent.model || 'N/A'}`;
+        
         return `
-          <div class="agent-card">
+          <div class="agent-card" data-agent="${agent.id}">
             <div class="agent-header">
               <img src="${avatar}" alt="${agent.name}" class="agent-avatar">
               <div class="agent-title">
                 <div class="agent-name">${agent.name}</div>
                 <div class="agent-role">${agent.role || 'No role'}</div>
               </div>
-              <span class="status-badge ${statusClass}">${agent.status || 'idle'}</span>
+              <span class="status-badge ${statusClass}">${liveStatus}</span>
             </div>
             <div class="agent-meta">
-              Model: ${agent.model || 'N/A'} | Workspace: ${agent.workspace || 'N/A'}<br>
+              ${modelInfo}<br>
+              ${sessionInfo}<br>
+              ${activityInfo ? `Last activity: <span class="activity-time">${activityInfo}</span><br>` : ''}
               ${agent.description || ''}
             </div>
             <div class="spawn-panel">
@@ -413,8 +514,25 @@
     
     function updateStats(agentList) {
       document.getElementById('totalAgents').textContent = agentList.length;
-      const active = agentList.filter(a => a.status === 'active' || a.status === 'busy').length;
+      
+      // Use liveStatus for active count, fallback to status
+      const active = agentList.filter(a => 
+        (a.liveStatus === 'active' || a.liveStatus === 'busy') || 
+        (!a.liveStatus && (a.status === 'active' || a.status === 'busy'))
+      ).length;
+      
       document.getElementById('activeAgents').textContent = active;
+      
+      // Update idle count
+      const idle = agentList.length - active;
+      const idleEl = document.getElementById('idleAgents');
+      if (idleEl) idleEl.textContent = idle;
+      
+      // Update last updated time (if not already set by refreshAgents)
+      const lastUpdatedEl = document.getElementById('lastUpdated');
+      if (lastUpdatedEl && !lastUpdatedEl.textContent) {
+        lastUpdatedEl.textContent = new Date().toLocaleTimeString();
+      }
     }
     
     async function spawnAgent(agentId) {

@@ -264,6 +264,85 @@ app.post('/api/agents/spawn', requireAuth, async (req, res) => {
   });
 });
 
+// ==================== AGENT STATUS API (Live) ====================
+
+app.get('/api/agents/status', requireAuth, async (req, res) => {
+  try {
+    const registry = loadAgentRegistry();
+    
+    // Simulierte Live-Session-Daten (später durch echte OpenClaw-API ersetzen)
+    const liveStatus = {
+      nana: { 
+        status: 'active', 
+        session: 'webchat', 
+        lastActivity: new Date().toISOString(),
+        model: 'openrouter/deepseek/deepseek-v3.2'
+      },
+      kate: { 
+        status: 'idle', 
+        session: null, 
+        lastActivity: null,
+        model: 'openai-codex/gpt-5.3-codex'
+      },
+      kari: { 
+        status: 'idle', 
+        session: null, 
+        lastActivity: null,
+        model: 'openrouter/auto'
+      },
+      samantha: { 
+        status: 'idle', 
+        session: null, 
+        lastActivity: null,
+        model: 'openai-codex/gpt-5.3-codex'
+      },
+      theresa: { 
+        status: 'idle', 
+        session: null, 
+        lastActivity: null,
+        model: 'openrouter/auto'
+      },
+      cassandra: { 
+        status: 'idle', 
+        session: null, 
+        lastActivity: null,
+        model: 'openrouter/auto'
+      },
+      marta: { 
+        status: 'idle', 
+        session: null, 
+        lastActivity: null,
+        model: 'openrouter/auto'
+      }
+    };
+    
+    // Kombiniere Registry mit Live-Status
+    const agentsWithStatus = registry.agents.map(agent => {
+      const live = liveStatus[agent.id] || { status: 'unknown', session: null, lastActivity: null };
+      return {
+        ...agent,
+        liveStatus: live.status,
+        liveSession: live.session,
+        lastActivity: live.lastActivity,
+        currentModel: live.model || agent.model
+      };
+    });
+    
+    res.json({
+      agents: agentsWithStatus,
+      lastUpdated: new Date().toISOString(),
+      totalAgents: agentsWithStatus.length,
+      activeSessions: agentsWithStatus.filter(a => a.liveStatus === 'active').length,
+      // Hinweis für spätere echte Integration
+      integration: 'simulated',
+      nextStep: 'Connect to OpenClaw API via sessions_list/subagents'
+    });
+  } catch (error) {
+    console.error('Agent status error:', error);
+    res.status(500).json({ error: 'Failed to load agent status', details: error.message });
+  }
+});
+
 // ==================== FILE SYNC (WebSocket) ====================
 
 const fileClients = new Set();
