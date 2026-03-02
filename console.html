@@ -272,8 +272,10 @@
       
       ws.onopen = () => {
         console.log('Terminal connected');
+        resetReconnectAttempts();
         updateStatus('connected', 'Connected');
         term.focus();
+        startHeartbeat();
       };
       
       ws.onmessage = (event) => {
@@ -289,13 +291,20 @@
       
       ws.onclose = () => {
         console.log('Terminal disconnected');
+        stopHeartbeat();
         updateStatus('disconnected', 'Disconnected');
         document.getElementById('disconnected-overlay').classList.add('visible');
+        
+        // Auto-reconnect if not intentional
+        if (!window.manualDisconnect) {
+          scheduleReconnect();
+        }
       };
       
       ws.onerror = (err) => {
         console.error('WebSocket error:', err);
-        updateStatus('disconnected', 'Error');
+        updateStatus('disconnected', 'Connection Error');
+        stopHeartbeat();
       };
       
       // Send input to server
@@ -330,10 +339,60 @@
       }
     }
     
+    let heartbeatInterval;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    const baseReconnectDelay = 1000;
+    let reconnectTimeout;
+    
+    function startHeartbeat() {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping' }));
+        }
+      }, 30000); // 30 seconds
+    }
+    
+    function stopHeartbeat() {
+      clearInterval(heartbeatInterval);
+    }
+    
+    function scheduleReconnect() {
+      if (reconnectAttempts >= maxReconnectAttempts) {
+        console.log('Max reconnect attempts reached');
+        updateStatus('disconnected', 'Failed - Refresh page');
+        return;
+      }
+      
+      const delay = baseReconnectDelay * Math.pow(2, reconnectAttempts);
+      reconnectAttempts++;
+      
+      console.log(`Reconnect scheduled in ${delay}ms (attempt ${reconnectAttempts})`);
+      updateStatus('connecting', `Reconnecting (${reconnectAttempts}/${maxReconnectAttempts})...`);
+      
+      clearTimeout(reconnectTimeout);
+      reconnectTimeout = setTimeout(() => {
+        console.log(`Reconnecting (attempt ${reconnectAttempts})...`);
+        reconnectTerminal();
+      }, delay);
+    }
+    
+    function resetReconnectAttempts() {
+      reconnectAttempts = 0;
+      clearTimeout(reconnectTimeout);
+    }
+    
     function updateStatus(state, text) {
       const el = document.getElementById('connection-status');
       el.className = 'terminal-status status-' + state;
       el.textContent = text;
+      
+      // Update button state
+      const btn = document.querySelector('.btn.primary');
+      if (btn) {
+        btn.disabled = (state === 'connecting');
+      }
     }
     
     // Initialize
