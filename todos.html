@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TODOs | OpenClaw Cockpit</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Inter, system-ui, Arial, sans-serif; background: #0b1020; color: #e8ecff; margin: 0; padding: 24px; min-height: 100vh; }
+    h1 { margin: 0 0 8px; font-size: 28px; color: #00d4ff; }
+    .sub { opacity: .85; margin-bottom: 20px; }
+    .nav { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .btn { cursor: pointer; border: 1px solid #3a4a84; background: #121a33; color: #e8ecff; padding: 8px 12px; border-radius: 10px; text-decoration: none; font-size: 13px; display: inline-block; }
+    .btn:hover { background: #1c2750; }
+    .btn.primary { background: #24407a; border-color: #6ea6ff; }
+    .btn.danger { border-color: #994455; color: #ff8a8a; }
+    .btn.success { background: #1c3f2e; border-color: #3d7b52; }
+    
+    .panel { background: #111831; border: 1px solid #2c3a6f; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .panelRow { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    
+    input, select { background: #0b1228; border: 1px solid #3a4a84; color: #e8ecff; padding: 10px; border-radius: 8px; font-size: 14px; }
+    input { flex: 1; min-width: 200px; }
+    select { width: 150px; }
+    
+    .stats { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; }
+    .stat-box { background: #111831; border: 1px solid #2c3a6f; border-radius: 12px; padding: 15px; min-width: 120px; text-align: center; }
+    .stat-value { font-size: 28px; font-weight: bold; color: #00d4ff; }
+    .stat-label { font-size: 12px; opacity: 0.8; margin-top: 5px; }
+    
+    .todo-list { display: flex; flex-direction: column; gap: 10px; }
+    .todo-item { background: #121a33; border: 1px solid #24305e; border-radius: 12px; padding: 15px; display: flex; gap: 15px; align-items: center; }
+    .todo-item:hover { border-color: #3a4a84; }
+    
+    .todo-checkbox { width: 24px; height: 24px; cursor: pointer; }
+    .todo-content { flex: 1; }
+    .todo-title { font-size: 16px; margin-bottom: 5px; }
+    .todo-title.done { text-decoration: line-through; opacity: 0.6; }
+    .todo-meta { font-size: 12px; opacity: 0.7; display: flex; gap: 10px; flex-wrap: wrap; }
+    
+    .priority { padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+    .priority-low { background: #95a5a6; color: #000; }
+    .priority-medium { background: #3498db; color: #fff; }
+    .priority-high { background: #f39c12; color: #000; }
+    .priority-critical { background: #e74c3c; color: #fff; }
+    
+    .loading { text-align: center; padding: 40px; opacity: 0.7; }
+    .empty { text-align: center; padding: 40px; opacity: 0.6; }
+    .error { background: #3a2430; border: 1px solid #994455; color: #ff8a8a; padding: 15px; border-radius: 8px; margin: 10px 0; }
+    
+    .api-key-input { width: 100%; max-width: 400px; }
+  </style>
+</head>
+<body>
+  <h1>✅ TODOs</h1>
+  <div class="sub">Dynamisch aus API geladen · <span id="lastUpdate">-</span></div>
+  
+  <div class="nav">
+    <a href="./index.html" class="btn">← Dashboard</a>
+    <a href="./console.html" class="btn">💻 Console</a>
+    <a href="./files.html" class="btn">📁 Files</a>
+    <a href="./agents.html" class="btn">🤖 Agents</a>
+    <button class="btn" onclick="refreshTodos()">🔄 Refresh</button>
+  </div>
+  
+  <div class="panel">
+    <h3>⚙️ Settings</h3>
+    <div class="panelRow">
+      <input id="apiKey" type="password" class="api-key-input" placeholder="COCKPIT_API_KEY" />
+      <button class="btn" onclick="saveApiKey()">💾 Save</button>
+    </div>
+  </div>
+  
+  <div class="panel">
+    <h3>➕ Neues TODO</h3>
+    <div class="panelRow">
+      <input id="newTodoTitle" placeholder="Was muss erledigt werden?" />
+      <select id="newTodoPriority">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+        <option value="critical">Critical</option>
+      </select>
+      <select id="newTodoCategory">
+        <option value="general">General</option>
+        <option value="bug">Bug</option>
+        <option value="feature">Feature</option>
+        <option value="improvement">Improve</option>
+      </select>
+      <button class="btn primary" onclick="addTodo()">Hinzufügen</button>
+    </div>
+  </div>
+  
+  <div class="stats">
+    <div class="stat-box">
+      <div class="stat-value" id="totalCount">-</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="openCount">-</div>
+      <div class="stat-label">Open</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="doneCount">-</div>
+      <div class="stat-label">Done</div>
+    </div>
+  </div>
+  
+  <div id="message"></div>
+  <div id="todoList" class="todo-list">
+    <div class="loading">Loading...</div>
+  </div>
+
+  <script>
+    let apiKey = localStorage.getItem('cockpit_api_key') || '';
+    let todos = [];
+    
+    document.getElementById('apiKey').value = apiKey;
+    
+    function saveApiKey() {
+      apiKey = document.getElementById('apiKey').value.trim();
+      localStorage.setItem('cockpit_api_key', apiKey);
+      showMessage('API Key saved!', 'success');
+      refreshTodos();
+    }
+    
+    function showMessage(text, type) {
+      const msg = document.getElementById('message');
+      msg.innerHTML = `<div class="${type}" style="margin-bottom:15px;padding:15px;border-radius:8px;">${text}</div>`;
+      setTimeout(() => msg.innerHTML = '', 3000);
+    }
+    
+    async function apiCall(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': apiKey,
+          ...options.headers
+        }
+      });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+    
+    async function refreshTodos() {
+      try {
+        const data = await apiCall('/api/todos');
+        todos = data.todos || [];
+        renderTodos();
+        updateStats();
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+      } catch (err) {
+        showMessage('Error: ' + err.message, 'error');
+      }
+    }
+    
+    function updateStats() {
+      document.getElementById('totalCount').textContent = todos.length;
+      document.getElementById('openCount').textContent = todos.filter(t => t.status !== 'done').length;
+      document.getElementById('doneCount').textContent = todos.filter(t => t.status === 'done').length;
+    }
+    
+    function renderTodos() {
+      const list = document.getElementById('todoList');
+      
+      if (todos.length === 0) {
+        list.innerHTML = '<div class="empty">No TODOs yet. Add one above!</div>';
+        return;
+      }
+      
+      // Sort: done last, then by priority
+      const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+      const sorted = [...todos].sort((a, b) => {
+        if (a.status === 'done' && b.status !== 'done') return 1;
+        if (b.status === 'done' && a.status !== 'done') return -1;
+        return (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2);
+      });
+      
+      list.innerHTML = sorted.map(todo => `
+        <div class="todo-item">
+          <input type="checkbox" class="todo-checkbox" 
+                 ${todo.status === 'done' ? 'checked' : ''} 
+                 onchange="toggleTodo('${todo.id}', this.checked)">
+          <div class="todo-content">
+            <div class="todo-title ${todo.status === 'done' ? 'done' : ''}">${escapeHtml(todo.title)}</div>
+            <div class="todo-meta">
+              <span class="priority priority-${todo.priority}">${todo.priority.toUpperCase()}</span>
+              <span>${todo.category}</span>
+              <span>Created: ${new Date(todo.created).toLocaleDateString()}</span>
+            </div>
+          </div>
+          <button class="btn danger" onclick="deleteTodo('${todo.id}')">🗑️</button>
+        </div>
+      `).join('');
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    async function addTodo() {
+      const title = document.getElementById('newTodoTitle').value.trim();
+      if (!title) {
+        showMessage('Please enter a title', 'error');
+        return;
+      }
+      
+      const priority = document.getElementById('newTodoPriority').value;
+      const category = document.getElementById('newTodoCategory').value;
+      
+      try {
+        await apiCall('/api/todos', {
+          method: 'POST',
+          body: JSON.stringify({ title, priority, category })
+        });
+        
+        document.getElementById('newTodoTitle').value = '';
+        showMessage('TODO added!', 'success');
+        refreshTodos();
+      } catch (err) {
+        showMessage('Error: ' + err.message, 'error');
+      }
+    }
+    
+    async function toggleTodo(id, done) {
+      try {
+        await apiCall(`/api/todos/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ status: done ? 'done' : 'open' })
+        });
+        refreshTodos();
+      } catch (err) {
+        showMessage('Error: ' + err.message, 'error');
+      }
+    }
+    
+    async function deleteTodo(id) {
+      if (!confirm('Delete this TODO?')) return;
+      
+      try {
+        await apiCall(`/api/todos/${id}`, { method: 'DELETE' });
+        showMessage('TODO deleted', 'success');
+        refreshTodos();
+      } catch (err) {
+        showMessage('Error: ' + err.message, 'error');
+      }
+    }
+    
+    // Initial load
+    refreshTodos();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(refreshTodos, 30000);
+  </script>
+</body>
+</html>
