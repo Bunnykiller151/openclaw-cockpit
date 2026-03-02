@@ -2,7 +2,7 @@
   "generated_at": "2026-03-01T23:42:03.181Z",
   "focus": "strategy",
   "agents": [
-    { "id": "nana", "name": "Nana", "role": "Orchestrator", "status": "online", "portrait": "./avatars_nana.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
+    { "id": "nana", "name": "Nana", "role": "Orchestrator", "status": "online", "portrait": "./portraits/nana.jpg", "updated_at": "2026-03-01T23:42:03.181Z" },
     { "id": "kari", "name": "Kari", "role": "Shopify Clerk", "status": "busy", "portrait": "./avatars_kari.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
     { "id": "kate", "name": "Kate", "role": "Data Analyst", "status": "online", "portrait": "./avatars_kate.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
     { "id": "samantha", "name": "Samantha", "role": "API Executor", "status": "idle", "portrait": "./avatars_samantha.svg", "updated_at": "2026-03-01T23:42:03.181Z" },
