@@ -1,0 +1,74 @@
+{
+  "agents": [
+    {
+      "id": "main",
+      "name": "Nana",
+      "role": "Primary Orchestrator",
+      "model": "openai-codex/gpt-5.3-codex",
+      "status": "active",
+      "description": "Haupt-Agent und first point of contact",
+      "portrait": "https://ui-avatars.com/api/?name=Nana&background=00d4ff&color=fff"
+    },
+    {
+      "id": "kate",
+      "name": "Kate",
+      "role": "Data Analyst",
+      "model": "openai-codex/gpt-5.3-codex",
+      "status": "idle",
+      "description": "Python Expert & Datenanalyse",
+      "portrait": "https://ui-avatars.com/api/?name=Kate&background=e74c3c&color=fff"
+    },
+    {
+      "id": "kari",
+      "name": "Kari",
+      "role": "Shopify Clerk",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Shopify UI/Clerk-Tasks",
+      "portrait": "https://ui-avatars.com/api/?name=Kari&background=f39c12&color=fff"
+    },
+    {
+      "id": "samantha",
+      "name": "Samantha",
+      "role": "API Execution",
+      "model": "openai-codex/gpt-5.3-codex",
+      "status": "idle",
+      "description": "API-first Execution Agent",
+      "portrait": "https://ui-avatars.com/api/?name=Samantha&background=9b59b6&color=fff"
+    },
+    {
+      "id": "theresa",
+      "name": "Theresa",
+      "role": "Browser Research",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Web-Research & Data Extraction",
+      "portrait": "https://ui-avatars.com/api/?name=Theresa&background=2ecc71&color=fff"
+    },
+    {
+      "id": "cassandra",
+      "name": "Cassandra",
+      "role": "TBD",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Konfiguriert, Rolle noch nicht definiert",
+      "portrait": "https://ui-avatars.com/api/?name=Cassandra&background=95a5a6&color=fff"
+    },
+    {
+      "id": "marta",
+      "name": "Marta",
+      "role": "TBD",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Konfiguriert, Rolle noch nicht definiert",
+      "portrait": "https://ui-avatars.com/api/?name=Marta&background=34495e&color=fff"
+    }
+  ],
+  "routing_rules": {
+    "api_tasks": "samantha",
+    "shopify_ui": "kari",
+    "data_analysis": "kate",
+    "web_research": "theresa",
+    "orchestration": "main"
+  }
+}

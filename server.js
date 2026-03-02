@@ -246,7 +246,8 @@ app.get('/api/files/content/*', requireAuth, async (req, res) => {
 // Load agent registry
 function loadAgentRegistry() {
   try {
-    const registryPath = path.join(WORKSPACE, 'cockpit/agents/registry.json');
+    // Use bundled agents.json for container compatibility
+    const registryPath = path.join(__dirname, 'agents.json');
     if (fsSync.existsSync(registryPath)) {
       return JSON.parse(fsSync.readFileSync(registryPath, 'utf-8'));
     }
@@ -262,69 +263,45 @@ app.get('/api/agents/list', requireAuth, (req, res) => {
   res.json(registry);
 });
 
-// Spawn agent
+// Spawn agent (simulated - openclaw not available in container)
 app.post('/api/agents/spawn', requireAuth, async (req, res) => {
-  try {
-    const { agentId, task } = req.body;
-    
-    if (!agentId || !task) {
-      return res.status(400).json({ error: 'agentId and task required' });
-    }
-
-    // Run openclaw spawn
-    const { stdout, stderr } = await execAsync(
-      `openclaw spawn ${agentId} "${task.replace(/"/g, '\\"')}"`,
-      { cwd: WORKSPACE, timeout: 30000 }
-    );
-
-    res.json({ 
-      success: true, 
-      agentId, 
-      task,
-      output: stdout,
-      error: stderr || null
-    });
-  } catch (err) {
-    console.error('Spawn error:', err);
-    res.status(500).json({ 
-      error: err.message,
-      stderr: err.stderr 
-    });
+  const { agentId, task } = req.body;
+  
+  if (!agentId || !task) {
+    return res.status(400).json({ error: 'agentId and task required' });
   }
+
+  // In container mode, we can't spawn real agents
+  res.json({ 
+    success: true, 
+    agentId, 
+    task,
+    note: 'Agent spawn simulated (container mode). In production, this would execute: openclaw spawn ' + agentId,
+    container: true
+  });
 });
 
-// Get agent logs (session history)
+// Get agent logs (simulated)
 app.get('/api/agents/:agentId/logs', requireAuth, async (req, res) => {
-  try {
-    const { agentId } = req.params;
-    const limit = parseInt(req.query.limit) || 50;
-
-    // Get sessions list
-    const { stdout } = await execAsync('openclaw sessions list --json', { cwd: WORKSPACE });
-    const sessions = JSON.parse(stdout);
-    
-    // Filter sessions for this agent
-    const agentSessions = sessions.filter(s => 
-      s.sessionKey && s.sessionKey.includes(agentId)
-    ).slice(0, limit);
-
-    res.json({ agentId, sessions: agentSessions });
-  } catch (err) {
-    console.error('Logs error:', err);
-    res.status(500).json({ error: err.message });
-  }
+  const { agentId } = req.params;
+  
+  // Simulated logs
+  res.json({ 
+    agentId, 
+    container: true,
+    note: 'Logs not available in container mode',
+    sessions: []
+  });
 });
 
-// Get active sessions
+// Get active sessions (simulated)
 app.get('/api/sessions/active', requireAuth, async (req, res) => {
-  try {
-    const { stdout } = await execAsync('openclaw sessions list --json', { cwd: WORKSPACE });
-    const sessions = JSON.parse(stdout);
-    res.json({ sessions, count: sessions.length });
-  } catch (err) {
-    console.error('Sessions error:', err);
-    res.status(500).json({ error: err.message });
-  }
+  res.json({ 
+    container: true,
+    note: 'Sessions not available in container mode',
+    sessions: [],
+    count: 0 
+  });
 });
 
 // ==================== BASIC ROUTES ====================

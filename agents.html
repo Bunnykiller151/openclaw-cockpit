@@ -434,12 +434,14 @@
           body: JSON.stringify({ agentId, task })
         });
         
-        showMessage(`${agentId} spawned successfully!`, 'success');
-        addLog(`${agentId} spawned: ${data.output || 'OK'}`, 'info');
-        taskInput.value = '';
+        if (data.container) {
+          showMessage(`${agentId}: Spawn simulated (container mode)`, 'success');
+          addLog(`Note: ${data.note}`, 'info');
+        } else {
+          showMessage(`${agentId} spawned successfully!`, 'success');
+        }
         
-        // Refresh after a delay
-        setTimeout(refreshAgents, 3000);
+        taskInput.value = '';
       } catch (err) {
         showMessage('Spawn error: ' + err.message, 'error');
         addLog(`Error spawning ${agentId}: ${err.message}`, 'error');
