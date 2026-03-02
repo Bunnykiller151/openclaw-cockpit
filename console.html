@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Live Console | OpenClaw Cockpit</title>
+  
+  <!-- XTerm CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+  
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'SF Mono', Monaco, monospace;
+      background: #0b1020;
+      color: #e8ecff;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Header */
+    .header {
+      background: #121a33;
+      border-bottom: 1px solid #2c3a6f;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 18px;
+      color: #00d4ff;
+    }
+    .nav {
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      cursor: pointer;
+      border: 1px solid #3a4a84;
+      background: #121a33;
+      color: #e8ecff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .btn:hover {
+      background: #1c2750;
+    }
+    .btn.primary {
+      background: #24407a;
+      border-color: #6ea6ff;
+    }
+    
+    /* Main Layout */
+    .main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    
+    /* Terminal Panel */
+    .terminal-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: #0b1228;
+      border-right: 1px solid #2c3a6f;
+    }
+    .terminal-header {
+      background: #121a33;
+      padding: 8px 15px;
+      border-bottom: 1px solid #2c3a6f;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .terminal-status {
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+    .status-connecting { background: #f39c12; color: #000; }
+    .status-connected { background: #2ecc71; color: #000; }
+    .status-disconnected { background: #e74c3c; color: #fff; }
+    
+    #terminal-container {
+      flex: 1;
+      padding: 10px;
+      overflow: hidden;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      width: 300px;
+      background: #10162b;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-section {
+      border-bottom: 1px solid #2c3a6f;
+      padding: 15px;
+    }
+    .sidebar-section h3 {
+      margin: 0 0 10px 0;
+      font-size: 13px;
+      color: #00d4ff;
+      text-transform: uppercase;
+    }
+    
+    /* Quick Commands */
+    .quick-cmd {
+      display: block;
+      width: 100%;
+      text-align: left;
+      margin: 4px 0;
+      font-size: 12px;
+      padding: 6px 10px;
+    }
+    
+    /* Info Panel */
+    .info-text {
+      font-size: 12px;
+      opacity: 0.8;
+      line-height: 1.5;
+    }
+    .info-text code {
+      background: #0b1228;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    
+    /* Connection Overlay */
+    .overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(11, 16, 32, 0.95);
+      padding: 30px;
+      border-radius: 12px;
+      border: 1px solid #3a4a84;
+      text-align: center;
+      display: none;
+    }
+    .overlay.visible { display: block; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <h1>⚡ OpenClaw Cockpit - Live Console</h1>
+    <div class="nav">
+      <a href="./index.html" class="btn">← Dashboard</a>
+      <a href="./transfer.html" class="btn">🔄 Transfer</a>
+      <a href="./agents.html" class="btn">🤖 Agents</a>
+      <button class="btn primary" onclick="reconnectTerminal()">🔄 Reconnect</button>
+    </div>
+  </div>
+  
+  <!-- Main -->
+  <div class="main">
+    <!-- Terminal -->
+    <div class="terminal-panel">
+      <div class="terminal-header">
+        <span>Terminal - bash @ /data/workspace</span>
+        <span id="connection-status" class="terminal-status status-connecting">Connecting...</span>
+      </div>
+      <div id="terminal-container"></div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-section">
+        <h3>⚡ Quick Commands</h3>
+        <button class="btn quick-cmd" onclick="sendCommand('ls -la')">ls -la</button>
+        <button class="btn quick-cmd" onclick="sendCommand('pwd')">pwd</button>
+        <button class="btn quick-cmd" onclick="sendCommand('cd cockpit && ls')"> cockpit/</button>
+        <button class="btn quick-cmd" onclick="sendCommand('cd agents && ls')"> agents/</button>
+        <button class="btn quick-cmd" onclick="sendCommand('git status')">git status</button>
+        <button class="btn quick-cmd" onclick="sendCommand('openclaw sessions list')">sessions list</button>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>📁 Quick Navigation</h3>
+        <button class="btn quick-cmd" onclick="sendCommand('cd /data/workspace')">~/workspace</button>
+        <button class="btn quick-cmd" onclick="sendCommand('cd /data/workspace/cockpit')">~/cockpit</button>
+        <button class="btn quick-cmd" onclick="sendCommand('cd /data/workspace/agents')">~/agents</button>
+        <button class="btn quick-cmd" onclick="sendCommand('cd /data/workspace/cockpit/transfer')">~/transfer</button>
+      </div>
+      
+      <div class="sidebar-section">
+        <h3>ℹ️ Info</h3>
+        <div class="info-text">
+          <strong>Workspace:</strong> <code>/data/workspace</code><br><br>
+          <strong>Shell:</strong> bash<br><br>
+          <strong>Shortcuts:</strong><br>
+          • Ctrl+C: Cancel<br>
+          • Ctrl+L: Clear<br>
+          • Tab: Complete<br><br>
+          <strong>Tip:</strong> Du kannst direkt tippen oder Quick-Commands nutzen!
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Disconnected Overlay -->
+  <div id="disconnected-overlay" class="overlay">
+    <h3>⚠️ Verbindung verloren</h3>
+    <p>Terminal-Verbindung wurde getrennt.</p>
+    <button class="btn primary" onclick="reconnectTerminal()" style="margin-top: 15px;">Erneut verbinden</button>
+  </div>
+
+  <!-- XTerm.js -->
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+  
+  <script>
+    let term;
+    let ws;
+    let fitAddon;
+    
+    function initTerminal() {
+      // Create terminal
+      term = new Terminal({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: '"SF Mono", Monaco, "Courier New", monospace',
+        theme: {
+          background: '#0b1228',
+          foreground: '#e8ecff',
+          cursor: '#00d4ff',
+          selectionBackground: '#24407a',
+          black: '#0b1020',
+          red: '#ff6b6b',
+          green: '#2ecc71',
+          yellow: '#f1c40f',
+          blue: '#3498db',
+          magenta: '#9b59b6',
+          cyan: '#00d4ff',
+          white: '#e8ecff'
+        }
+      });
+      
+      // Add fit addon
+      fitAddon = new FitAddon.FitAddon();
+      term.loadAddon(fitAddon);
+      
+      // Open terminal
+      term.open(document.getElementById('terminal-container'));
+      fitAddon.fit();
+      
+      // Connect WebSocket
+      connectWebSocket();
+    }
+    
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/terminal`;
+      
+      updateStatus('connecting', 'Connecting...');
+      document.getElementById('disconnected-overlay').classList.remove('visible');
+      
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log('Terminal connected');
+        updateStatus('connected', 'Connected');
+        term.focus();
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'output') {
+            term.write(msg.data);
+          }
+        } catch (e) {
+          term.write(event.data);
+        }
+      };
+      
+      ws.onclose = () => {
+        console.log('Terminal disconnected');
+        updateStatus('disconnected', 'Disconnected');
+        document.getElementById('disconnected-overlay').classList.add('visible');
+      };
+      
+      ws.onerror = (err) => {
+        console.error('WebSocket error:', err);
+        updateStatus('disconnected', 'Error');
+      };
+      
+      // Send input to server
+      term.onData((data) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'input', data }));
+        }
+      });
+      
+      // Handle resize
+      window.addEventListener('resize', () => {
+        fitAddon.fit();
+        if (ws.readyState === WebSocket.OPEN) {
+          const { cols, rows } = term;
+          ws.send(JSON.stringify({ type: 'resize', cols, rows }));
+        }
+      });
+    }
+    
+    function reconnectTerminal() {
+      if (ws) {
+        ws.close();
+      }
+      term.clear();
+      connectWebSocket();
+    }
+    
+    function sendCommand(cmd) {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'input', data: cmd + '\r' }));
+        term.focus();
+      }
+    }
+    
+    function updateStatus(state, text) {
+      const el = document.getElementById('connection-status');
+      el.className = 'terminal-status status-' + state;
+      el.textContent = text;
+    }
+    
+    // Initialize
+    window.addEventListener('DOMContentLoaded', initTerminal);
+  </script>
+</body>
+</html>

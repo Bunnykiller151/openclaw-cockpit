@@ -1,290 +1,142 @@
+/**
+ * OpenClaw Cockpit Backend
+ * Phase 1+2: Server Setup + Terminal
+ */
+
+const express = require('express');
 const http = require('http');
-const fs = require('fs');
+const WebSocket = require('ws');
+const pty = require('node-pty');
 const path = require('path');
+const fs = require('fs');
+const cors = require('cors');
 
-const baseDir = __dirname;
-const port = process.env.PORT || 3000;
-const apiKey = process.env.COCKPIT_API_KEY || '';
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server, path: '/terminal' });
 
-const boardFiles = {
-  strategy: path.join(baseDir, 'data_strategy.json'),
-  today: path.join(baseDir, 'data_today.json')
-};
+// Config
+const PORT = process.env.PORT || 3000;
+const WORKSPACE = '/data/workspace';
+const API_KEY = process.env.COCKPIT_API_KEY || 'dev-key-change-in-production';
 
-function send(res, code, content, type = 'text/plain') {
-  res.writeHead(code, { 'Content-Type': type });
-  res.end(content);
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Auth Middleware
+function requireAuth(req, res, next) {
+  const key = req.headers['x-api-key'];
+  if (key !== API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
 }
 
-function sendJson(res, code, obj) {
-  send(res, code, JSON.stringify(obj, null, 2), 'application/json; charset=utf-8');
-}
-
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk;
-      if (body.length > 2 * 1024 * 1024) {
-        reject(new Error('Payload too large'));
-        req.destroy();
-      }
-    });
-    req.on('end', () => resolve(body));
-    req.on('error', reject);
-  });
-}
-
-function getBoardFromUrl(rawUrl) {
-  const u = new URL(rawUrl, 'http://localhost');
-  const b = (u.searchParams.get('board') || 'strategy').toLowerCase();
-  return boardFiles[b] ? b : 'strategy';
-}
-
-function readBoard(board) {
-  const targetPath = boardFiles[board] || boardFiles.strategy;
-  if (!fs.existsSync(targetPath)) {
-    return { focus: board, generated_at: new Date().toISOString(), agents: [], items: [] };
-  }
-  return JSON.parse(fs.readFileSync(targetPath, 'utf-8'));
-}
-
-function writeBoard(board, payload) {
-  const targetPath = boardFiles[board] || boardFiles.strategy;
-  fs.writeFileSync(targetPath, JSON.stringify(payload, null, 2), 'utf-8');
-}
-
-function requireApiKey(req, res) {
-  if (!apiKey) {
-    sendJson(res, 500, { ok: false, error: 'COCKPIT_API_KEY is not set on server' });
-    return false;
-  }
-  const incomingKey = req.headers['x-api-key'];
-  if (!incomingKey || incomingKey !== apiKey) {
-    sendJson(res, 401, { ok: false, error: 'Unauthorized' });
-    return false;
-  }
-  return true;
-}
-
-function nowIso() {
-  return new Date().toISOString();
-}
-
-const mime = {
-  '.html': 'text/html; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.png': 'image/png'
-};
-
-http.createServer(async (req, res) => {
-  const method = req.method || 'GET';
-  const rawUrl = req.url || '/';
-  const pathname = rawUrl.split('?')[0];
-
-  if (method === 'GET' && (pathname === '/health' || pathname === '/openclaw/cockpit/health')) {
-    return sendJson(res, 200, { ok: true, service: 'openclaw-cockpit' });
-  }
-
-  // Full board replace
-  if (method === 'POST' && (pathname === '/api/update' || pathname === '/openclaw/cockpit/api/update')) {
-    if (!requireApiKey(req, res)) return;
-    try {
-      const board = getBoardFromUrl(rawUrl);
-      const payload = JSON.parse(await readBody(req));
-      if (!payload || typeof payload !== 'object' || !Array.isArray(payload.items)) {
-        return sendJson(res, 400, { ok: false, error: 'Invalid payload: expected object with items[]' });
-      }
-      const now = nowIso();
-      const normalized = {
-        ...payload,
-        focus: board,
-        agents: (Array.isArray(payload.agents) ? payload.agents : []).map(a => ({ ...a, updated_at: a.updated_at || now })),
-        items: (Array.isArray(payload.items) ? payload.items : []).map(i => ({ ...i, updated_at: i.updated_at || now })),
-        generated_at: now
-      };
-      writeBoard(board, normalized);
-      return sendJson(res, 200, { ok: true, updated: true, board, generated_at: normalized.generated_at });
-    } catch (err) {
-      return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
-    }
-  }
-
-  // Heartbeat endpoint for agent presence updates
-  if (method === 'POST' && (pathname === '/api/heartbeat' || pathname === '/openclaw/cockpit/api/heartbeat')) {
-    if (!requireApiKey(req, res)) return;
-    try {
-      const board = getBoardFromUrl(rawUrl);
-      const payload = JSON.parse(await readBody(req));
-      const agentId = String(payload.agentId || '').trim();
-      if (!agentId) return sendJson(res, 400, { ok: false, error: 'agentId is required' });
-
-      const data = readBoard(board);
-      const now = nowIso();
-      const idx = (data.agents || []).findIndex(a => a.id === agentId);
-
-      if (idx === -1) {
-        data.agents = data.agents || [];
-        data.agents.push({
-          id: agentId,
-          name: payload.name || agentId,
-          role: payload.role || 'Agent',
-          portrait: payload.portrait || '',
-          status: payload.status || 'online',
-          note: payload.note || '',
-          updated_at: now
-        });
-      } else {
-        data.agents[idx] = {
-          ...data.agents[idx],
-          ...(payload.status ? { status: payload.status } : {}),
-          ...(payload.note !== undefined ? { note: payload.note } : {}),
-          updated_at: now
-        };
-      }
-
-      data.generated_at = now;
-      writeBoard(board, data);
-      return sendJson(res, 200, { ok: true, board, agentId, updated_at: now });
-    } catch (err) {
-      return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
-    }
-  }
-
-  // Bulk agent sync (bridge endpoint)
-  if (method === 'POST' && (pathname === '/api/agent-sync' || pathname === '/openclaw/cockpit/api/agent-sync')) {
-    if (!requireApiKey(req, res)) return;
-    try {
-      const board = getBoardFromUrl(rawUrl);
-      const payload = JSON.parse(await readBody(req));
-      const updates = Array.isArray(payload?.agents) ? payload.agents : [];
-      const data = readBoard(board);
-      data.agents = Array.isArray(data.agents) ? data.agents : [];
-      const now = nowIso();
-
-      for (const u of updates) {
-        const id = String(u.id || '').trim();
-        if (!id) continue;
-        const idx = data.agents.findIndex(a => a.id === id);
-        if (idx === -1) {
-          data.agents.push({
-            id,
-            name: u.name || id,
-            role: u.role || 'Agent',
-            portrait: u.portrait || '',
-            status: u.status || 'online',
-            note: u.note || '',
-            updated_at: now
-          });
-        } else {
-          data.agents[idx] = {
-            ...data.agents[idx],
-            ...(u.name ? { name: u.name } : {}),
-            ...(u.role ? { role: u.role } : {}),
-            ...(u.portrait ? { portrait: u.portrait } : {}),
-            ...(u.status ? { status: u.status } : {}),
-            ...(u.note !== undefined ? { note: u.note } : {}),
-            updated_at: now
-          };
-        }
-      }
-
-      data.generated_at = now;
-      writeBoard(board, data);
-      return sendJson(res, 200, { ok: true, board, updatedAgents: updates.length, updated_at: now });
-    } catch (err) {
-      return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
-    }
-  }
-
-  // Reorder items
-  if (method === 'POST' && (pathname === '/api/reorder' || pathname === '/openclaw/cockpit/api/reorder')) {
-    if (!requireApiKey(req, res)) return;
-    try {
-      const board = getBoardFromUrl(rawUrl);
-      const payload = JSON.parse(await readBody(req));
-      const order = Array.isArray(payload?.order) ? payload.order.map(String) : [];
-      if (!order.length) return sendJson(res, 400, { ok: false, error: 'order[] required' });
-
-      const data = readBoard(board);
-      const map = new Map((data.items || []).map(i => [String(i.id), i]));
-      const reordered = [];
-      for (const id of order) {
-        const item = map.get(id);
-        if (item) reordered.push(item);
-      }
-      for (const item of (data.items || [])) {
-        if (!order.includes(String(item.id))) reordered.push(item);
-      }
-      data.items = reordered;
-      data.generated_at = nowIso();
-      writeBoard(board, data);
-      return sendJson(res, 200, { ok: true, board, count: data.items.length });
-    } catch (err) {
-      return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
-    }
-  }
-
-  // Partial item update (single card)
-  const itemMatch = pathname.match(/^\/(?:openclaw\/cockpit\/)?api\/item\/([^/]+)$/);
-  if (method === 'PATCH' && itemMatch) {
-    if (!requireApiKey(req, res)) return;
-    try {
-      const board = getBoardFromUrl(rawUrl);
-      const itemId = decodeURIComponent(itemMatch[1]);
-      const patch = JSON.parse(await readBody(req));
-      const data = readBoard(board);
-      const idx = (data.items || []).findIndex(i => i.id === itemId);
-      if (idx === -1) return sendJson(res, 404, { ok: false, error: `Item ${itemId} not found`, board });
-
-      const now = nowIso();
-      data.items[idx] = { ...data.items[idx], ...patch, updated_at: now };
-      data.generated_at = now;
-      writeBoard(board, data);
-      return sendJson(res, 200, { ok: true, updated: true, board, item: data.items[idx] });
-    } catch (err) {
-      return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
-    }
-  }
-
-  // Partial agent status update
-  const agentMatch = pathname.match(/^\/(?:openclaw\/cockpit\/)?api\/agent\/([^/]+)$/);
-  if (method === 'PATCH' && agentMatch) {
-    if (!requireApiKey(req, res)) return;
-    try {
-      const board = getBoardFromUrl(rawUrl);
-      const agentId = decodeURIComponent(agentMatch[1]);
-      const patch = JSON.parse(await readBody(req));
-      const data = readBoard(board);
-      const idx = (data.agents || []).findIndex(a => a.id === agentId);
-      if (idx === -1) return sendJson(res, 404, { ok: false, error: `Agent ${agentId} not found`, board });
-
-      const now = nowIso();
-      data.agents[idx] = { ...data.agents[idx], ...patch, updated_at: now };
-      data.generated_at = now;
-      writeBoard(board, data);
-      return sendJson(res, 200, { ok: true, updated: true, board, agent: data.agents[idx] });
-    } catch (err) {
-      return sendJson(res, 400, { ok: false, error: `Bad request: ${err.message}` });
-    }
-  }
-
-  const normalizedPath = (
-    pathname === '/' || pathname === '/openclaw/cockpit' || pathname === '/openclaw/cockpit/'
-  ) ? '/index.html' : pathname.replace('/openclaw/cockpit', '');
-
-  const filePath = path.join(baseDir, normalizedPath);
-  if (!filePath.startsWith(baseDir)) return send(res, 403, 'Forbidden');
-
-  fs.readFile(filePath, (err, data) => {
-    if (err) return send(res, 404, 'Not found');
-    send(res, 200, data, mime[path.extname(filePath)] || 'application/octet-stream');
-  });
-}).listen(port, () => {
-  console.log(`Cockpit läuft auf Port ${port}`);
+// Logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} | ${req.method} ${req.path}`);
+  next();
 });
+
+// ==================== TERMINAL (WebSocket) ====================
+
+const terminals = new Map();
+
+wss.on('connection', (ws, req) => {
+  console.log('Terminal connection opened');
+  
+  const term = pty.spawn('bash', [], {
+    name: 'xterm-color',
+    cols: 80,
+    rows: 24,
+    cwd: WORKSPACE,
+    env: process.env
+  });
+
+  const termId = Date.now().toString();
+  terminals.set(termId, { term, ws });
+
+  // Send output to browser
+  term.onData((data) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'output', data }));
+    }
+  });
+
+  term.onExit(() => {
+    console.log('Terminal exited');
+    terminals.delete(termId);
+    ws.close();
+  });
+
+  // Receive input from browser
+  ws.on('message', (message) => {
+    try {
+      const msg = JSON.parse(message);
+      
+      if (msg.type === 'input') {
+        term.write(msg.data);
+      } else if (msg.type === 'resize') {
+        term.resize(msg.cols, msg.rows);
+      }
+    } catch (e) {
+      // Raw input fallback
+      term.write(message.toString());
+    }
+  });
+
+  ws.on('close', () => {
+    console.log('Terminal connection closed');
+    term.kill();
+    terminals.delete(termId);
+  });
+
+  // Send welcome message
+  ws.send(JSON.stringify({ 
+    type: 'output', 
+    data: '\r\n🎮 OpenClaw Cockpit Terminal\r\nWorkspace: ' + WORKSPACE + '\r\n\r\n$ '
+  }));
+});
+
+// ==================== API ROUTES ====================
+
+// Health Check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// System Info
+app.get('/api/system/info', (req, res) => {
+  res.json({
+    workspace: WORKSPACE,
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    version: require('./package.json').version
+  });
+});
+
+// List active terminals
+app.get('/api/terminals', requireAuth, (req, res) => {
+  res.json({ 
+    count: terminals.size,
+    terminals: Array.from(terminals.keys()) 
+  });
+});
+
+// ==================== ERROR HANDLING ====================
+
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+// Start Server
+server.listen(PORT, () => {
+  console.log(`🎮 Cockpit Backend running on port ${PORT}`);
+  console.log(`📁 Workspace: ${WORKSPACE}`);
+  console.log(`🔌 Terminal endpoint: ws://localhost:${PORT}/terminal`);
+});
+
+module.exports = { app, server };
