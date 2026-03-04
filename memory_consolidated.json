@@ -1,0 +1,359 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created_at": "2026-03-03T12:15:00Z",
+    "purpose": "Single Point of Truth for OpenClaw Memory",
+    "sources": [
+      "memory/2026-03-03.md",
+      "COCKPIT.md",
+      "data_strategy.json",
+      "agents.json",
+      "data_today.json",
+      "HEARTBEAT.md",
+      "AGENTS.md",
+      "SOUL.md"
+    ]
+  },
+  "architecture": {
+    "deployment": {
+      "platform": "Railway",
+      "environment": "Container (public cloud)",
+      "exposure": "Public via Railway proxy",
+      "containers": [
+        {
+          "name": "OpenClaw (Nana)",
+          "url": "https://clawdbot-railway-template-production-7d44.up.railway.app/openclaw/chat?session=agent%3Amain%3Amain",
+          "purpose": "Primary agent orchestrator"
+        },
+        {
+          "name": "Cockpit Dashboard",
+          "url": "https://splendid-ambition-production.up.railway.app/index.html",
+          "purpose": "Web interface for monitoring and control"
+        }
+      ],
+      "persistent_storage": true,
+      "note": "Persistent volume attached to Railway container"
+    },
+    "github": {
+      "repository": "Bunnykiller151/openclaw-cockpit",
+      "url": "https://github.com/Bunnykiller151/openclaw-cockpit",
+      "deployment_flow": "GitHub → Railway automatic deployment",
+      "current_state": "Local clone has deleted files (not committed), only agents.html in working directory",
+      "last_commits": [
+        "96ed92a Final: Complete Cockpit with all features linked",
+        "f1d21d3 feat: Add TODO API",
+        "f1091d8 docs: Mark 96 groups as done, add Cockpit TODOs",
+        "d6f9997 fix: Remove node-pty, downgrade chokidar",
+        "706341a fix: Simplified server for fast Railway startup"
+      ]
+    },
+    "data_flow": "Cockpit pulls data from GitHub repo, not directly from OpenClaw. Live data integration planned as TODO."
+  },
+  "agents": [
+    {
+      "id": "main",
+      "name": "Nana",
+      "role": "Primary Orchestrator / Orchestrator",
+      "model": "openai-codex/gpt-5.3-codex",
+      "status": "active",
+      "description": "Haupt-Agent und first point of contact",
+      "portrait_url": "https://ui-avatars.com/api/?name=Nana&background=00d4ff&color=fff",
+      "portrait_local": "./portraits/nana.jpg"
+    },
+    {
+      "id": "kate",
+      "name": "Kate",
+      "role": "Data Analyst",
+      "model": "openai-codex/gpt-5.3-codex",
+      "status": "online",
+      "description": "Python Expert & Datenanalyse",
+      "portrait_url": "https://ui-avatars.com/api/?name=Kate&background=e74c3c&color=fff",
+      "portrait_local": "./portraits/kate.jpg"
+    },
+    {
+      "id": "kari",
+      "name": "Kari",
+      "role": "Shopify Clerk",
+      "model": "openrouter/auto",
+      "status": "busy",
+      "description": "Shopify UI/Clerk-Tasks",
+      "portrait_url": "https://ui-avatars.com/api/?name=Kari&background=f39c12&color=fff",
+      "portrait_local": "./portraits/kari.jpg"
+    },
+    {
+      "id": "samantha",
+      "name": "Samantha",
+      "role": "API Execution / API Executor",
+      "model": "openai-codex/gpt-5.3-codex",
+      "status": "idle",
+      "description": "API-first Execution Agent",
+      "portrait_url": "https://ui-avatars.com/api/?name=Samantha&background=9b59b6&color=fff",
+      "portrait_local": "./portraits/samantha.jpg"
+    },
+    {
+      "id": "theresa",
+      "name": "Theresa",
+      "role": "Browser Research",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Web-Research & Data Extraction",
+      "portrait_url": "https://ui-avatars.com/api/?name=Theresa&background=2ecc71&color=fff",
+      "portrait_local": "./portraits/theresa.jpg"
+    },
+    {
+      "id": "cassandra",
+      "name": "Cassandra",
+      "role": "Processing Agent / TBD",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Konfiguriert, Rolle noch nicht definiert",
+      "portrait_url": "https://ui-avatars.com/api/?name=Cassandra&background=95a5a6&color=fff",
+      "portrait_local": "./portraits/cassandra.jpg"
+    },
+    {
+      "id": "marta",
+      "name": "Marta",
+      "role": "Support Agent / TBD",
+      "model": "openrouter/auto",
+      "status": "idle",
+      "description": "Konfiguriert, Rolle noch nicht definiert",
+      "rait_url": "https://ui-avatars.com/api/?name=Marta&background=34495e&color=fff",
+      "portrait_local": "./portraits/marta.jpg"
+    }
+  ],
+  "routing_rules": {
+    "api_tasks": "samantha",
+    "shopify_ui": "kari",
+    "data_analysis": "kate",
+    "web_research": "theresa",
+    "orchestration": "main"
+  },
+  "tasks": {
+    "strategic": [
+      {
+        "id": "OPS-001",
+        "title": "Operations-Cockpit als Single Source of Truth",
+        "owner": "Nana",
+        "priority": "P1",
+        "status": "in_progress",
+        "next_step": "Tägliche Updates automatisieren (API-Write + Zeitplan)",
+        "blocker": "Noch kein fixer Update-Takt bestätigt",
+        "updated_at": "2026-03-01T23:42:03.181Z"
+      },
+      {
+        "id": "OPS-002",
+        "title": "Monitoring-Standard für Long-Running Jobs",
+        "owner": "Nana",
+        "priority": "P1",
+        "status": "todo",
+        "next_step": "Healthcheck-, Restart- und Logging-Template finalisieren",
+        "blocker": "Konvention pro Jobtyp fehlt",
+        "updated_at": "2026-03-01T23:42:03.181Z"
+      },
+      {
+        "id": "OPS-003",
+        "title": "Agenten-Rollen/Übergaben auf 1 Seite",
+        "owner": "Nana",
+        "priority": "P2",
+        "status": "todo",
+        "next_step": "Routing-Playbook mit Eskalationsregeln veröffentlichen",
+        "blocker": "Abnahme durch John",
+        "updated_at": "2026-03-01T23:42:03.181Z"
+      }
+    ],
+    "daily": [
+      {
+        "id": "TODAY-01",
+        "title": "Cockpit live validieren",
+        "owner": "Nana",
+        "priority": "P1",
+        "status": "in_progress",
+        "next_step": "Health + API + UI live check durchführen",
+        "blocker": "keiner",
+        "updated_at": "2026-03-01T23:50:00.000Z"
+      },
+      {
+        "id": "TODAY-02",
+        "title": "Monitoring-Template v1 finalisieren",
+        "owner": "Nana",
+        "priority": "P1",
+        "status": "todo",
+        "next_step": "Check-Intervall + Restart-Regel + Alert-Text definieren",
+        "blocker": "Freigabe der Grenzwerte",
+        "updated_at": "2026-03-01T23:50:00.000Z"
+      },
+      {
+        "id": "TODAY-03",
+        "title": "Ops-README für Team",
+        "owner": "Nana",
+        "priority": "P2",
+        "status": "todo",
+        "next_step": "Kurzanleitung für Board-Update schreiben",
+        "blocker": "keiner",
+        "updated_at": "2026-03-01T23:50:00.000Z"
+      }
+    ]
+  },
+  "security": {
+    "audit_findings": [
+      {
+        "issue": "Weak model tiers in configuration",
+        "details": "openrouter/anthropic/claude-haiku-4-5, openai/gpt-4o-mini, openai/gpt-4-turbo – increased risk of prompt injection",
+        "severity": "warning"
+      },
+      {
+        "issue": "Credentials directory permissions too loose",
+        "details": "/data/.clawdbot/credentials mode=755 (should be 700)",
+        "severity": "warning"
+      }
+    ],
+    "update_status": {
+      "current": "v2026.2.24",
+      "available": "v2026.3.2",
+      "recommendation": "Run openclaw update"
+    },
+    "missing_measures": [
+      "Automatic security updates (unattended-upgrades not installed)",
+      "Firewall tools not available (container environment)",
+      "Disk encryption not detectable (container)"
+    ],
+    "risk_profile": "Railway deployment → VPS Hardened (Profile 2) recommended over Developer Convenience due to public exposure"
+  },
+  "conversations": [
+    {
+      "date": "2026-03-03",
+      "topic": "Memory consolidation and storage improvement",
+      "key_points": [
+        "User frustrated with inconsistent memory storage",
+        "Request to create Single Point of Truth for all memories",
+        "Rule: All future memories must be stored in central location",
+        "Persistent storage already attached on Railway",
+        "Need better storage format than markdown prose (indexed table suggested)"
+      ],
+      "action_items": [
+        "Extract all memory information from local and GitHub sources",
+        "Create consolidated memory store",
+        "Implement hard rule for future memory storage",
+        "Evaluate better storage formats (SQLite, structured JSON)"
+      ]
+    },
+    {
+      "date": "2026-03-03",
+      "topic": "Video analysis: OpenClaw AI Memory Update Finally Fixes The Reset Problem",
+      "video_url": "https://www.youtube.com/watch?v=7kEgTiDf8Qw",
+      "source": "Reddit post: https://www.reddit.com/r/AISEOInsider/comments/1rfg2sp/openclaw_ai_memory_update_finally_fixes_the_reset/",
+      "key_insights": [
+        "OpenClaw AI Memory Update introduces persistent memory across sessions",
+        "Solves the 'reset problem' where AI forgets context between chats",
+        "Stores structured context: goals, preferences, ongoing projects, conversation history",
+        "Enables continuity - each session builds on previous ones instead of restarting",
+        "Reduces mental friction by eliminating repetitive explanations",
+        "Makes AI feel less disposable, more like a companion",
+        "Particularly useful for: learning/study, creative projects, everyday organization, parallel projects",
+        "Improves reliability and trust through stable, predictable memory storage",
+        "Supports multiple projects simultaneously with separate context tracking"
+      ],
+      "technical_implications": [
+        "Memory is structured (not just prose), likely JSON/database format",
+        "Context persists across sessions (not just within a single chat)",
+        "Memory update likely part of OpenClaw v2026.3.2+",
+        "Aligns with our need for Single Point of Truth and indexed storage"
+      ],
+      "relevance_to_our_discussion": "Directly addresses our current problem: inconsistent memory storage across locations/formats. The update provides a built-in solution we should leverage.",
+      "action_items": [
+        "Check if our OpenClaw version (v2026.2.24) has memory update or needs update to v2026.3.2",
+        "Explore OpenClaw's built-in memory system configuration",
+        "Align our memory_consolidated.json approach with OpenClaw's native memory storage",
+        "Implement structured memory storage rather than markdown prose"
+      ]
+    },
+    {
+      "date": "2026-03-03",
+      "topic": "Pre-compaction memory flush",
+      "key_points": [
+        "User requested pre-compaction memory flush to store durable memories",
+        "Memory flush performed at 2026-03-03 22:29 UTC",
+        "Appended to memory/2026-03-03.md with memory flush log",
+        "Rule enforcement: all memories must be stored in central memory store"
+      ],
+      "action_items": [
+        "Ensure future memory storage follows single point of truth rule",
+        "Update memory_consolidated.json after significant events",
+        "Monitor OpenClaw memory update (v2026.3.2) for built-in solution"
+      ]
+    }
+  ],
+  "rules_and_principles": {
+    "memory_management": [
+      "Write everything down – no mental notes",
+      "Daily notes: memory/YYYY-MM-DD.md (raw logs)",
+      "Long-term memory: MEMORY.md (curated)",
+      "MEMORY.md only loaded in main sessions (security)",
+      "Review and update MEMORY.md periodically"
+    ],
+    "session_startup": [
+      "Read SOUL.md (identity)",
+      "Read USER.md (human context)",
+      "Read memory/YYYY-MM-DD.md (today + yesterday)",
+      "In main session: also read MEMORY.md"
+    ],
+    "safety": [
+      "Don't exfiltrate private data",
+      "Ask before destructive commands",
+      "trash > rm",
+      "When in doubt, ask"
+    ],
+    "group_chats": [
+      "Respond when directly mentioned or adding value",
+      "Stay silent during casual banter",
+      "One reaction per message max",
+      "Participate, don't dominate"
+    ],
+    "heartbeats": [
+      "Use proactively for periodic checks",
+      "Check emails, calendar, mentions, weather",
+      "Track checks in memory/heartbeat-state.json",
+      "Reach out for important events, stay quiet during quiet times"
+    ],
+    "core_truths_from_soul": [
+      "Be genuinely helpful, not performatively helpful",
+      "Have opinions",
+      "Be resourceful before asking",
+      "Earn trust through competence",
+      "Remember you're a guest"
+    ]
+  },
+  "cron_jobs": [
+    {
+      "id": "d205920e-cfe4-483c-9c88-f58ee86f73d1",
+      "name": "deepseek-monitor-daily",
+      "schedule": "cron 30 8 * * 1-5 @ UTC",
+      "next_run": "in 21h",
+      "last_run": "3h ago",
+      "status": "ok"
+    },
+    {
+      "id": "451c3636-50fb-494d-837e-eafad52f1c8c",
+      "name": "Daily 16:30 Europe news + stocks",
+      "schedule": "cron 30 16 * * * @ Europe/Berlin",
+      "next_run": "in 4h",
+      "last_run": "20h ago",
+      "status": "error"
+    },
+    {
+      "id": "a103c40e-04dd-45a0-a936-c7c41fb5e873",
+      "name": "Daily 09:00 AI news + research",
+      "schedule": "cron 0 9 * * * @ Europe/Berlin",
+      "next_run": "in 20h",
+      "last_run": "4h ago",
+      "status": "error"
+    }
+  ],
+  "current_priorities": [
+    "Create Single Point of Truth for memory (this file)",
+    "Implement hard rule for future memory storage",
+    "Evaluate and implement better storage format",
+    "Fix GitHub repo data leakage concerns",
+    "Implement backup strategy for persistent storage"
+  ]
+}
