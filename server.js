@@ -15,8 +15,8 @@ const cors = require('cors');
 const multer = require('multer');
 const chokidar = require('chokidar');
 
-// Global fetch for Node 18
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+// Use global fetch (Node 18+)
+const fetch = globalThis.fetch;
 
 const app = express();
 const server = http.createServer(app);
@@ -28,6 +28,59 @@ const PORT = process.env.PORT || 3000;
 const WORKSPACE = process.env.WORKSPACE_ROOT || '/app';
 const API_KEY = process.env.COCKPIT_API_KEY || 'dev-key-change-in-production';
 const MAX_FILE_SIZE = 40 * 1024 * 1024; // 40MB
+
+// OpenClaw Gateway Integration
+const OPENCLAW_GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'http://localhost:18789';
+const OPENCLAW_GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || '';
+const OPENCLAW_API_ENABLED = OPENCLAW_GATEWAY_TOKEN !== '';
+
+// OpenClaw API Helper
+async function invokeOpenClawTool(tool, args = {}, sessionKey = 'main') {
+  if (!OPENCLAW_API_ENABLED) {
+    throw new Error('OpenClaw Gateway integration disabled (no token)');
+  }
+  
+  try {
+    const response = await fetch(`${OPENCLAW_GATEWAY_URL}/tools/invoke`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENCLAW_GATEWAY_TOKEN}`
+      },
+      body: JSON.stringify({
+        tool,
+        action: 'json',
+        args,
+        sessionKey
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenClaw API error ${response.status}: ${errorText}`);
+    }
+    
+    const result = await response.json();
+    if (!result.ok) {
+      throw new Error(`OpenClaw tool error: ${result.error?.message || 'Unknown error'}`);
+    }
+    
+    // The result may contain text content with JSON inside
+    if (result.result?.content?.[0]?.text) {
+      try {
+        return JSON.parse(result.result.content[0].text);
+      } catch (parseErr) {
+        // If parsing fails, return the raw text
+        return result.result.content[0].text;
+      }
+    }
+    
+    return result.result;
+  } catch (error) {
+    console.error(`OpenClaw tool ${tool} error:`, error.message);
+    throw error;
+  }
+}
 
 // Middleware
 app.use(cors());
@@ -270,72 +323,164 @@ app.get('/api/agents/status', requireAuth, async (req, res) => {
   try {
     const registry = loadAgentRegistry();
     
-    // Simulierte Live-Session-Daten (später durch echte OpenClaw-API ersetzen)
-    const liveStatus = {
-      nana: { 
-        status: 'active', 
-        session: 'webchat', 
-        lastActivity: new Date().toISOString(),
-        model: 'openrouter/deepseek/deepseek-v3.2'
-      },
-      kate: { 
-        status: 'idle', 
-        session: null, 
-        lastActivity: null,
-        model: 'openai-codex/gpt-5.3-codex'
-      },
-      kari: { 
-        status: 'idle', 
-        session: null, 
-        lastActivity: null,
-        model: 'openrouter/auto'
-      },
-      samantha: { 
-        status: 'idle', 
-        session: null, 
-        lastActivity: null,
-        model: 'openai-codex/gpt-5.3-codex'
-      },
-      theresa: { 
-        status: 'idle', 
-        session: null, 
-        lastActivity: null,
-        model: 'openrouter/auto'
-      },
-      cassandra: { 
-        status: 'idle', 
-        session: null, 
-        lastActivity: null,
-        model: 'openrouter/auto'
-      },
-      marta: { 
-        status: 'idle', 
-        session: null, 
-        lastActivity: null,
-        model: 'openrouter/auto'
-      }
-    };
+    let liveStatus = {};
+    let integration = 'simulated';
+    let errorMessage = null;
     
-    // Kombiniere Registry mit Live-Status
+    // Try to fetch real OpenClaw data if API is enabled
+    if (OPENCLAW_API_ENABLED) {
+      try {
+        // Fetch active sessions
+        const sessions = await invokeOpenClawTool('sessions_list', {});
+        // Fetch subagents
+        const subagents = await invokeOpenClawTool('subagents', { action: 'list' });
+        
+        integration = 'live';
+        
+        // Map sessions to agent IDs
+        const sessionMap = {};
+        if (sessions && sessions.sessions) {
+          sessions.sessions.forEach(session => {
+            // Extract agent ID from session key (e.g., "agent:main:main" -> "main")
+            const match = session.key.match(/agent:([^:]+):/);
+            if (match) {
+              const agentId = match[1];
+              sessionMap[agentId] = {
+                status: 'active',
+                session: session.key,
+                lastActivity: session.updatedAt ? new Date(session.updatedAt).toISOString() : null,
+                model: session.model || 'unknown',
+                displayName: session.displayName,
+                channel: session.channel
+              };
+            }
+          });
+        }
+        
+        // Map subagents to agent IDs
+        if (subagents && subagents.agents) {
+          subagents.agents.forEach(subagent => {
+            const agentId = subagent.agentId || subagent.id;
+            if (agentId) {
+              // If already has session, update; otherwise create entry
+              if (!sessionMap[agentId]) {
+                sessionMap[agentId] = {
+                  status: subagent.status || 'idle',
+                  session: subagent.sessionKey,
+                  lastActivity: subagent.updatedAt ? new Date(subagent.updatedAt).toISOString() : null,
+                  model: subagent.model || 'unknown',
+                  displayName: subagent.displayName
+                };
+              }
+            }
+          });
+        }
+        
+        liveStatus = sessionMap;
+        
+      } catch (apiError) {
+        console.warn('OpenClaw API fetch failed, using simulated data:', apiError.message);
+        integration = 'simulated_fallback';
+        errorMessage = apiError.message;
+        // Fall back to simulated data
+        liveStatus = getSimulatedLiveStatus();
+      }
+    } else {
+      // No API token, use simulated data
+      liveStatus = getSimulatedLiveStatus();
+    }
+    
+    // Helper function for simulated data
+    function getSimulatedLiveStatus() {
+      return {
+        main: { 
+          status: 'active', 
+          session: 'agent:main:main', 
+          lastActivity: new Date().toISOString(),
+          model: 'openrouter/deepseek/deepseek-v3.2',
+          channel: 'telegram'
+        },
+        kate: { 
+          status: 'idle', 
+          session: null, 
+          lastActivity: null,
+          model: 'openai-codex/gpt-5.3-codex'
+        },
+        kari: { 
+          status: 'idle', 
+          session: null, 
+          lastActivity: null,
+          model: 'openrouter/auto'
+        },
+        samantha: { 
+          status: 'idle', 
+          session: null, 
+          lastActivity: null,
+          model: 'openai-codex/gpt-5.3-codex'
+        },
+        theresa: { 
+          status: 'idle', 
+          session: null, 
+          lastActivity: null,
+          model: 'openrouter/auto'
+        },
+        cassandra: { 
+          status: 'idle', 
+          session: null, 
+          lastActivity: null,
+          model: 'openrouter/auto'
+        },
+        marta: { 
+          status: 'idle', 
+          session: null, 
+          lastActivity: null,
+          model: 'openrouter/auto'
+        }
+      };
+    }
+    
+    // Combine registry with live status
     const agentsWithStatus = registry.agents.map(agent => {
-      const live = liveStatus[agent.id] || { status: 'unknown', session: null, lastActivity: null };
+      const live = liveStatus[agent.id] || { 
+        status: 'idle', 
+        session: null, 
+        lastActivity: null,
+        model: agent.model,
+        channel: null
+      };
+      
+      // Determine status display
+      let displayStatus = live.status;
+      if (displayStatus === 'active' && live.session) {
+        displayStatus = 'active';
+      } else if (displayStatus === 'idle' || !live.session) {
+        displayStatus = 'idle';
+      }
+      
       return {
         ...agent,
-        liveStatus: live.status,
+        liveStatus: displayStatus,
         liveSession: live.session,
         lastActivity: live.lastActivity,
-        currentModel: live.model || agent.model
+        currentModel: live.model || agent.model,
+        channel: live.channel,
+        displayName: live.displayName || agent.name
       };
     });
+    
+    // Count active sessions
+    const activeSessions = agentsWithStatus.filter(a => a.liveStatus === 'active').length;
     
     res.json({
       agents: agentsWithStatus,
       lastUpdated: new Date().toISOString(),
       totalAgents: agentsWithStatus.length,
-      activeSessions: agentsWithStatus.filter(a => a.liveStatus === 'active').length,
-      // Hinweis für spätere echte Integration
-      integration: 'simulated',
-      nextStep: 'Connect to OpenClaw API via sessions_list/subagents'
+      activeSessions,
+      integration,
+      openclawApiEnabled: OPENCLAW_API_ENABLED,
+      gatewayUrl: OPENCLAW_GATEWAY_URL,
+      error: errorMessage,
+      note: integration === 'live' ? 'Live OpenClaw data' : 'Simulated data (no API token or fetch failed)'
     });
   } catch (error) {
     console.error('Agent status error:', error);
