@@ -636,11 +636,67 @@
       document.getElementById('logPanel').style.display = 'none';
     }
     
-    // Initial load
+    // WebSocket Integration
+    let agentWs;
+    function connectAgentWs() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/agents-live`;
+      
+      agentWs = new WebSocket(wsUrl);
+      
+      agentWs.onopen = () => {
+        console.log('Connected to Agent Live Status stream');
+      };
+      
+      agentWs.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'status_update') {
+            const data = msg.data;
+            agents = data.agents || [];
+            renderAgents(agents);
+            updateStats(agents);
+            
+            if (data.lastUpdated) {
+              const lastUpdatedEl = document.getElementById('lastUpdated');
+              if (lastUpdatedEl) {
+                lastUpdatedEl.textContent = new Date(data.lastUpdated).toLocaleTimeString();
+              }
+            }
+            
+            if (data.integration === 'simulated') {
+              const integrationNote = document.getElementById('integrationNote');
+              if (integrationNote) {
+                integrationNote.textContent = 'Status: Simulated data (OpenClaw API integration pending)';
+              }
+            } else if (data.integration === 'live') {
+               const integrationNote = document.getElementById('integrationNote');
+              if (integrationNote) {
+                integrationNote.textContent = 'Status: Connected to Live OpenClaw Hub';
+              }
+            }
+          }
+        } catch (e) {
+          console.error('WebSocket receive error:', e);
+        }
+      };
+      
+      agentWs.onclose = () => {
+        console.log('Disconnected from Live Status stream. Reconnecting in 5s...');
+        setTimeout(connectAgentWs, 5000);
+      };
+      
+      agentWs.onerror = (err) => {
+        console.error('WebSocket error:', err);
+      };
+    }
+    
+    // Initial load HTTP fetch (to populate instantly if websocket takes a moment)
     refreshAgents();
     
-    // Auto-refresh every 30 seconds
-    setInterval(refreshAgents, 30000);
+    // Start WebSocket
+    connectAgentWs();
+    
   </script>
 </body>
 </html>

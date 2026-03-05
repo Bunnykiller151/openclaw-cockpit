@@ -52,14 +52,13 @@ GitHub (openclaw-cockpit) → Railway → https://splendid-ambition-production.u
 
 ## 📝 **AKTIVE TODOs (COCKPIT-ENTWICKLUNG)**
 
-### 🔴 **P0 – DRINGEND (zuerst umsetzen)**
+### ✅ **P0 – ERLEDIGT**
 | # | Task | Details | Status |
 |---|------|---------|--------|
-| 1 | **Live Agent Monitor implementieren** | Echte Session-Daten von OpenClaw API | ⏳ OFFEN |
-|   |   | - `agents.html` Dashboard mit Live-Status | |
-|   |   | - API-Endpunkt: `/api/agents/status` | |
-|   |   | - Agent-Registry aus `agents.json` nutzen | |
-|   |   | - WebSocket für Echtzeit-Updates | |
+| 1 | **Live Agent Monitor implementieren** | Echte Session-Daten von OpenClaw API | ✅ ERLEDIGT |
+|   |   | - `agents.html` & `index.html` Dashboard mit Live-Status | |
+|   |   | - WebSocket auf `/agents-live` implementiert | |
+|   |   | - Cached 5s Polling auf Serverseite + Broadcast | |
 
 ### 🟡 **P1 – WICHTIG (nächste Schritte)**
 | # | Task | Details | Status |
@@ -196,7 +195,7 @@ openclaw-cockpit/
 ### **Kurzfristig (1-2 Tage)**
 1. ✅ **Architektur verstehen** (erledigt)
 2. ✅ **TODOs aktualisieren** (erledigt)
-3. ⏳ **Live Agent Monitor implementieren** (P0 #1)
+3. ✅ **Live Agent Monitor implementieren** (P0 #1) erledigt
 4. ⏳ **Console funktionsfähig machen** (P1 #2)
 
 ### **Mittelfristig (3-5 Tage)**

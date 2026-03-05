@@ -1,67 +1,348 @@
 <!doctype html>
 <html lang="de">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>OpenClaw Cockpit</title>
   <style>
-    body{font-family:Inter,system-ui,Arial,sans-serif;background:#0b1020;color:#e8ecff;margin:0;padding:24px}
-    h1{margin:0 0 8px;font-size:28px}
-    .sub{opacity:.85;margin-bottom:12px}
-    .controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-    .btn{cursor:pointer;border:1px solid #3a4a84;background:#121a33;color:#e8ecff;padding:8px 12px;border-radius:10px}
-    .btn.active{background:#24407a;border-color:#6ea0ff}
-    .stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-    .stat{border:1px solid #3a4a84;background:#121a33;border-radius:999px;padding:6px 10px;font-size:12px}
-    .panel{border:1px solid #2c3a6f;background:#111831;border-radius:12px;padding:10px;margin-bottom:12px}
-    .panelRow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    input[type='password']{background:#0b1228;color:#e8ecff;border:1px solid #3a4a84;border-radius:8px;padding:8px 10px;min-width:280px}
-    .hint{font-size:12px;opacity:.8}
+    body {
+      font-family: Inter, system-ui, Arial, sans-serif;
+      background: #0b1020;
+      color: #e8ecff;
+      margin: 0;
+      padding: 24px
+    }
 
-    .agents{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));margin:14px 0 18px}
-    .agent{display:flex;gap:10px;align-items:center;background:#121a33;border:1px solid #24305e;border-radius:12px;padding:10px}
-    .agent img{width:44px;height:44px;border-radius:50%;border:1px solid #3a4a84;object-fit:cover}
-    .agent .name{font-weight:700}
-    .agent .role{font-size:12px;opacity:.85}
-    .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px}
-    .online{background:#2ecc71}.busy{background:#f39c12}.idle{background:#95a5a6}.offline{background:#e74c3c}
-    .stale{color:#ffb3b3}
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px
+    }
 
-    .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
-    .kanban{display:none;grid-template-columns:repeat(3,minmax(260px,1fr));gap:12px}
-    .col{background:#10162b;border:1px solid #24305e;border-radius:12px;padding:10px}
-    .col h3{margin:0 0 8px;font-size:14px}
-    .dropzone{min-height:80px;display:flex;flex-direction:column;gap:10px}
-    .dragging{opacity:.6}
-    .card{background:#121a33;border:1px solid #24305e;border-radius:14px;padding:14px}
-    .meta{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
-    .pill{padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid #3a4a84}
-    .P1{border-color:#ff8a8a;color:#ffb3b3}.P2{border-color:#ffd28a;color:#ffe2b8}.P3{border-color:#8ad1ff;color:#bce8ff}
-    .todo{background:#3a2430}.in_progress{background:#20304d}.done{background:#1c3f2e}
-    .tiny{font-size:12px;opacity:.75}
-    .chips{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px}
-    .chip{cursor:pointer;border:1px solid #3a4a84;background:#0f1730;color:#dfe7ff;padding:6px 10px;border-radius:999px;font-size:12px}
-    .chip.active{background:#2b3f76;border-color:#7ea6ff}
+    .sub {
+      opacity: .85;
+      margin-bottom: 12px
+    }
 
-    .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-    .mini{cursor:pointer;border:1px solid #3a4a84;background:#0f1730;color:#dfe7ff;padding:4px 8px;border-radius:999px;font-size:11px}
-    .mini.todoBtn{border-color:#994455}
-    .mini.progressBtn{border-color:#3d5b9b}
-    .mini.doneBtn{border-color:#3d7b52}
-    .mini.editBtn{border-color:#7b6cff}
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap
+    }
 
-    .modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:999}
-    .modal{width:min(760px,95vw);background:#10162b;border:1px solid #3a4a84;border-radius:12px;padding:12px}
-    .modal h3{margin:0 0 10px}
-    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
-    .field input,.field textarea{background:#0b1228;color:#e8ecff;border:1px solid #3a4a84;border-radius:8px;padding:8px 10px}
+    .btn {
+      cursor: pointer;
+      border: 1px solid #3a4a84;
+      background: #121a33;
+      color: #e8ecff;
+      padding: 8px 12px;
+      border-radius: 10px
+    }
 
-    h2{font-size:18px;margin:20px 0 10px}
+    .btn.active {
+      background: #24407a;
+      border-color: #6ea0ff
+    }
+
+    .stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px
+    }
+
+    .stat {
+      border: 1px solid #3a4a84;
+      background: #121a33;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px
+    }
+
+    .panel {
+      border: 1px solid #2c3a6f;
+      background: #111831;
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 12px
+    }
+
+    .panelRow {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center
+    }
+
+    input[type='password'] {
+      background: #0b1228;
+      color: #e8ecff;
+      border: 1px solid #3a4a84;
+      border-radius: 8px;
+      padding: 8px 10px;
+      min-width: 280px
+    }
+
+    .hint {
+      font-size: 12px;
+      opacity: .8
+    }
+
+    .agents {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      margin: 14px 0 18px
+    }
+
+    .agent {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: #121a33;
+      border: 1px solid #24305e;
+      border-radius: 12px;
+      padding: 10px
+    }
+
+    .agent img {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 1px solid #3a4a84;
+      object-fit: cover
+    }
+
+    .agent .name {
+      font-weight: 700
+    }
+
+    .agent .role {
+      font-size: 12px;
+      opacity: .85
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px
+    }
+
+    .online {
+      background: #2ecc71
+    }
+
+    .busy {
+      background: #f39c12
+    }
+
+    .idle {
+      background: #95a5a6
+    }
+
+    .offline {
+      background: #e74c3c
+    }
+
+    .stale {
+      color: #ffb3b3
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr))
+    }
+
+    .kanban {
+      display: none;
+      grid-template-columns: repeat(3, minmax(260px, 1fr));
+      gap: 12px
+    }
+
+    .col {
+      background: #10162b;
+      border: 1px solid #24305e;
+      border-radius: 12px;
+      padding: 10px
+    }
+
+    .col h3 {
+      margin: 0 0 8px;
+      font-size: 14px
+    }
+
+    .dropzone {
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px
+    }
+
+    .dragging {
+      opacity: .6
+    }
+
+    .card {
+      background: #121a33;
+      border: 1px solid #24305e;
+      border-radius: 14px;
+      padding: 14px
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0 10px
+    }
+
+    .pill {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid #3a4a84
+    }
+
+    .P1 {
+      border-color: #ff8a8a;
+      color: #ffb3b3
+    }
+
+    .P2 {
+      border-color: #ffd28a;
+      color: #ffe2b8
+    }
+
+    .P3 {
+      border-color: #8ad1ff;
+      color: #bce8ff
+    }
+
+    .todo {
+      background: #3a2430
+    }
+
+    .in_progress {
+      background: #20304d
+    }
+
+    .done {
+      background: #1c3f2e
+    }
+
+    .tiny {
+      font-size: 12px;
+      opacity: .75
+    }
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0 14px
+    }
+
+    .chip {
+      cursor: pointer;
+      border: 1px solid #3a4a84;
+      background: #0f1730;
+      color: #dfe7ff;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px
+    }
+
+    .chip.active {
+      background: #2b3f76;
+      border-color: #7ea6ff
+    }
+
+    .quick {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px
+    }
+
+    .mini {
+      cursor: pointer;
+      border: 1px solid #3a4a84;
+      background: #0f1730;
+      color: #dfe7ff;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px
+    }
+
+    .mini.todoBtn {
+      border-color: #994455
+    }
+
+    .mini.progressBtn {
+      border-color: #3d5b9b
+    }
+
+    .mini.doneBtn {
+      border-color: #3d7b52
+    }
+
+    .mini.editBtn {
+      border-color: #7b6cff
+    }
+
+    .modalBackdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999
+    }
+
+    .modal {
+      width: min(760px, 95vw);
+      background: #10162b;
+      border: 1px solid #3a4a84;
+      border-radius: 12px;
+      padding: 12px
+    }
+
+    .modal h3 {
+      margin: 0 0 10px
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 8px
+    }
+
+    .field input,
+    .field textarea {
+      background: #0b1228;
+      color: #e8ecff;
+      border: 1px solid #3a4a84;
+      border-radius: 8px;
+      padding: 8px 10px
+    }
+
+    h2 {
+      font-size: 18px;
+      margin: 20px 0 10px
+    }
   </style>
 </head>
+
 <body>
   <h1>⚡ OpenClaw Cockpit</h1>
-  <div class="sub"><span id="focusLabel">Board</span> · <span id="ts">lädt…</span> · <span id="lastRefresh">refresh …</span></div>
+  <div class="sub"><span id="focusLabel">Board</span> · <span id="ts">lädt…</span> · <span id="lastRefresh">refresh
+      …</span></div>
 
   <div class="controls">
     <button id="btn-strategy" class="btn">Strategy</button>
@@ -96,9 +377,18 @@
   </div>
   <div id="grid" class="grid"></div>
   <div id="kanban" class="kanban">
-    <section class="col"><h3>TODO</h3><div class="dropzone" data-status="todo"></div></section>
-    <section class="col"><h3>IN PROGRESS</h3><div class="dropzone" data-status="in_progress"></div></section>
-    <section class="col"><h3>DONE</h3><div class="dropzone" data-status="done"></div></section>
+    <section class="col">
+      <h3>TODO</h3>
+      <div class="dropzone" data-status="todo"></div>
+    </section>
+    <section class="col">
+      <h3>IN PROGRESS</h3>
+      <div class="dropzone" data-status="in_progress"></div>
+    </section>
+    <section class="col">
+      <h3>DONE</h3>
+      <div class="dropzone" data-status="done"></div>
+    </section>
   </div>
 
   <div id="editModalBackdrop" class="modalBackdrop">
@@ -119,8 +409,8 @@
   </div>
 
   <script>
-    const statusLabel = s => ({todo:'TODO',in_progress:'IN PROGRESS',done:'DONE'}[s] || s);
-    const agentStatusLabel = s => ({online:'Online',busy:'Busy',idle:'Idle',offline:'Offline'}[s] || s);
+    const statusLabel = s => ({ todo: 'TODO', in_progress: 'IN PROGRESS', done: 'DONE' }[s] || s);
+    const agentStatusLabel = s => ({ online: 'Online', busy: 'Busy', idle: 'Idle', offline: 'Offline' }[s] || s);
     let board = localStorage.getItem('cockpit_board') || 'strategy';
     let filter = localStorage.getItem('cockpit_filter') || 'all';
     let viewMode = localStorage.getItem('cockpit_view') || 'list';
@@ -129,26 +419,26 @@
 
     const boardFile = (name) => name === 'today' ? './data_today.json' : './data_strategy.json';
 
-    function formatTime(ts){
-      if(!ts) return 'n/a';
+    function formatTime(ts) {
+      if (!ts) return 'n/a';
       const d = new Date(ts);
-      if(Number.isNaN(d.getTime())) return ts;
+      if (Number.isNaN(d.getTime())) return ts;
       return d.toLocaleString('de-DE', { hour12: false });
     }
 
-    function minutesAgo(ts){
-      if(!ts) return null;
+    function minutesAgo(ts) {
+      if (!ts) return null;
       const d = new Date(ts).getTime();
-      if(Number.isNaN(d)) return null;
+      if (Number.isNaN(d)) return null;
       return Math.floor((Date.now() - d) / 60000);
     }
 
-    function isStale(ts, limitMin = 8){
+    function isStale(ts, limitMin = 8) {
       const m = minutesAgo(ts);
       return m !== null && m > limitMin;
     }
 
-    function updateButtons(){
+    function updateButtons() {
       document.getElementById('btn-strategy').classList.toggle('active', board === 'strategy');
       document.getElementById('btn-today').classList.toggle('active', board === 'today');
       document.getElementById('view-list').classList.toggle('active', viewMode === 'list');
@@ -159,13 +449,13 @@
       document.getElementById('kanban').style.display = viewMode === 'kanban' ? 'grid' : 'none';
     }
 
-    function applyFilter(items){
-      if(filter === 'P1') return items.filter(i => i.priority === 'P1');
-      if(filter === 'in_progress') return items.filter(i => i.status === 'in_progress');
+    function applyFilter(items) {
+      if (filter === 'P1') return items.filter(i => i.priority === 'P1');
+      if (filter === 'in_progress') return items.filter(i => i.status === 'in_progress');
       return items;
     }
 
-    function renderStats(data){
+    function renderStats(data) {
       const items = data.items || [];
       const inProgress = items.filter(i => i.status === 'in_progress').length;
       const done = items.filter(i => i.status === 'done').length;
@@ -181,8 +471,8 @@
       `;
     }
 
-    async function patchItemStatus(itemId, status){
-      if(!apiKey){
+    async function patchItemStatus(itemId, status) {
+      if (!apiKey) {
         alert('Bitte zuerst API-Key speichern.');
         return;
       }
@@ -194,7 +484,7 @@
         },
         body: JSON.stringify({ status })
       });
-      if(!resp.ok){
+      if (!resp.ok) {
         const t = await resp.text();
         alert('Update fehlgeschlagen: ' + t);
         return;
@@ -203,8 +493,8 @@
       lastRefreshTs = Date.now();
     }
 
-    async function sendHeartbeat(){
-      if(!apiKey){
+    async function sendHeartbeat() {
+      if (!apiKey) {
         alert('Bitte zuerst API-Key speichern.');
         return;
       }
@@ -220,7 +510,7 @@
           note: 'UI Heartbeat'
         })
       });
-      if(!resp.ok){
+      if (!resp.ok) {
         const t = await resp.text();
         alert('Heartbeat fehlgeschlagen: ' + t);
         return;
@@ -229,18 +519,18 @@
       lastRefreshTs = Date.now();
     }
 
-    async function saveOrderFromDom(){
-      if(!apiKey) return;
+    async function saveOrderFromDom() {
+      if (!apiKey) return;
       const ids = [...document.querySelectorAll('[data-item-id]')].map(el => el.dataset.itemId).filter(Boolean);
-      if(!ids.length) return;
+      if (!ids.length) return;
       await fetch(`/api/reorder?board=${board}`, {
-        method:'POST',
-        headers:{'content-type':'application/json','x-api-key':apiKey},
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': apiKey },
         body: JSON.stringify({ order: ids })
       });
     }
 
-    function cardHtml(it){
+    function cardHtml(it) {
       const payload = encodeURIComponent(JSON.stringify(it));
       return `
           <article class="card" draggable="true" data-item-id="${it.id}">
@@ -263,7 +553,7 @@
       `;
     }
 
-    function openEditModal(item){
+    function openEditModal(item) {
       document.getElementById('editId').value = item.id || '';
       document.getElementById('editTitle').value = item.title || '';
       document.getElementById('editOwner').value = item.owner || '';
@@ -274,12 +564,12 @@
       document.getElementById('editModalBackdrop').style.display = 'flex';
     }
 
-    function closeEditModal(){
+    function closeEditModal() {
       document.getElementById('editModalBackdrop').style.display = 'none';
     }
 
-    async function saveEditModal(){
-      if(!apiKey){ alert('Bitte zuerst API-Key speichern.'); return; }
+    async function saveEditModal() {
+      if (!apiKey) { alert('Bitte zuerst API-Key speichern.'); return; }
       const id = document.getElementById('editId').value;
       const patch = {
         title: document.getElementById('editTitle').value,
@@ -291,10 +581,10 @@
       };
       const resp = await fetch(`/api/item/${encodeURIComponent(id)}?board=${board}`, {
         method: 'PATCH',
-        headers: {'content-type':'application/json','x-api-key':apiKey},
+        headers: { 'content-type': 'application/json', 'x-api-key': apiKey },
         body: JSON.stringify(patch)
       });
-      if(!resp.ok){ const t = await resp.text(); alert('Speichern fehlgeschlagen: ' + t); return; }
+      if (!resp.ok) { const t = await resp.text(); alert('Speichern fehlgeschlagen: ' + t); return; }
       closeEditModal();
       await render();
       lastRefreshTs = Date.now();
@@ -307,21 +597,7 @@
         document.getElementById('ts').textContent = `Stand: ${formatTime(data.generated_at)}`;
         renderStats(data);
 
-        const agents = document.getElementById('agents');
-        agents.innerHTML = (data.agents || []).map(a => {
-          const stale = isStale(a.updated_at);
-          return `
-            <article class="agent">
-              <img src="${a.portrait || ''}" alt="${a.name || 'Agent'}" />
-              <div>
-                <div class="name">${a.name || '-'}</div>
-                <div class="role">${a.role || '-'}</div>
-                <div class="role ${stale ? 'stale' : ''}"><span class="dot ${a.status || 'idle'}"></span>${agentStatusLabel(a.status || 'idle')} · upd ${formatTime(a.updated_at)}${stale ? ' · stale' : ''}</div>
-                ${a.note ? `<div class="tiny">${a.note}</div>` : ''}
-              </div>
-            </article>
-          `;
-        }).join('');
+        // Note: agents are now rendered by the WebSocket logic below instead of from static JSON
 
         const filtered = applyFilter(data.items || []);
         const grid = document.getElementById('grid');
@@ -331,7 +607,7 @@
         zones.forEach(z => z.innerHTML = '');
         filtered.forEach(it => {
           const zone = zones.find(z => z.dataset.status === (it.status || 'todo'));
-          if(zone){ zone.insertAdjacentHTML('beforeend', cardHtml(it)); }
+          if (zone) { zone.insertAdjacentHTML('beforeend', cardHtml(it)); }
         });
 
         let dragEl = null;
@@ -344,10 +620,10 @@
           zone.addEventListener('dragover', (e) => e.preventDefault());
           zone.addEventListener('drop', async (e) => {
             e.preventDefault();
-            if(!dragEl) return;
+            if (!dragEl) return;
             zone.appendChild(dragEl);
             const newStatus = zone.dataset.status;
-            if(newStatus){
+            if (newStatus) {
               await patchItemStatus(dragEl.dataset.itemId, newStatus);
             } else {
               await saveOrderFromDom();
@@ -415,21 +691,77 @@
     document.getElementById('saveEditBtn').addEventListener('click', saveEditModal);
     document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
     document.getElementById('editModalBackdrop').addEventListener('click', (e) => {
-      if(e.target.id === 'editModalBackdrop') closeEditModal();
+      if (e.target.id === 'editModalBackdrop') closeEditModal();
     });
 
-    function tickRefreshLabel(){
+    function tickRefreshLabel() {
       const el = document.getElementById('lastRefresh');
-      if(!lastRefreshTs){ el.textContent = 'refresh …'; return; }
+      if (!lastRefreshTs) { el.textContent = 'refresh …'; return; }
       const sec = Math.floor((Date.now() - lastRefreshTs) / 1000);
       el.textContent = `refresh vor ${sec}s`;
     }
 
+    // WebSocket Integration for Live Agents
+    let agentWs;
+    function connectAgentWs() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/agents-live`;
+
+      agentWs = new WebSocket(wsUrl);
+
+      agentWs.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'status_update') {
+            const agentList = msg.data.agents || [];
+            const agentContainer = document.getElementById('agents');
+
+            agentContainer.innerHTML = agentList.map(a => {
+              const displayStatus = a.liveStatus || a.status || 'idle';
+              // Check if activity is stale (> 8 mins old)
+              let stale = false;
+              let timeStr = 'n/a';
+              if (a.lastActivity || a.updated_at) {
+                const t = new Date(a.lastActivity || a.updated_at);
+                timeStr = t.toLocaleTimeString('de-DE');
+                stale = ((Date.now() - t.getTime()) / 60000) > 8;
+              }
+              const avatar = a.portrait || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.name)}&background=random`;
+
+              return `
+                <article class="agent">
+                  <img src="${avatar}" alt="${a.name || 'Agent'}" />
+                  <div>
+                    <div class="name">${a.name || '-'}</div>
+                    <div class="role">${a.role || '-'}</div>
+                    <div class="role ${stale ? 'stale' : ''}">
+                      <span class="dot ${displayStatus}"></span>${agentStatusLabel(displayStatus)} 
+                      · upd ${timeStr}${stale ? ' · stale' : ''}${a.liveSession ? ' · <span style="font-family: monospace; opacity: 0.8; font-size: 10px;">' + a.liveSession + '</span>' : ''}
+                    </div>
+                  </div>
+                </article>
+              `;
+            }).join('');
+          }
+        } catch (e) {
+          console.error('WebSocket receive error:', e);
+        }
+      };
+
+      agentWs.onclose = () => {
+        setTimeout(connectAgentWs, 5000); // Try to reconnect
+      };
+    }
+
     document.getElementById('apiKeyInput').value = apiKey;
     updateButtons();
-    render().then(()=>{ lastRefreshTs = Date.now(); tickRefreshLabel(); });
+    render().then(() => { lastRefreshTs = Date.now(); tickRefreshLabel(); });
     setInterval(async () => { await render(); lastRefreshTs = Date.now(); }, 20000);
     setInterval(tickRefreshLabel, 1000);
+
+    // Start WebSocket
+    connectAgentWs();
   </script>
 </body>
+
 </html>

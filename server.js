@@ -22,6 +22,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server, path: '/terminal' });
 const fileWss = new WebSocket.Server({ server, path: '/files' });
+const agentWss = new WebSocket.Server({ server, path: '/agents-live' });
 
 // Config
 const PORT = process.env.PORT || 3000;
@@ -320,6 +321,20 @@ app.post('/api/agents/spawn', requireAuth, async (req, res) => {
 // ==================== AGENT STATUS API (Live) ====================
 
 app.get('/api/agents/status', requireAuth, async (req, res) => {
+  if (cachedAgentStatus) {
+    return res.json(cachedAgentStatus);
+  }
+  try {
+    const status = await getAgentStatusData();
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load agent status', details: error.message });
+  }
+});
+
+let cachedAgentStatus = null;
+
+async function getAgentStatusData() {
   try {
     const registry = loadAgentRegistry();
     
@@ -471,7 +486,8 @@ app.get('/api/agents/status', requireAuth, async (req, res) => {
     // Count active sessions
     const activeSessions = agentsWithStatus.filter(a => a.liveStatus === 'active').length;
     
-    res.json({
+    
+    return {
       agents: agentsWithStatus,
       lastUpdated: new Date().toISOString(),
       totalAgents: agentsWithStatus.length,
@@ -481,12 +497,52 @@ app.get('/api/agents/status', requireAuth, async (req, res) => {
       gatewayUrl: OPENCLAW_GATEWAY_URL,
       error: errorMessage,
       note: integration === 'live' ? 'Live OpenClaw data' : 'Simulated data (no API token or fetch failed)'
-    });
+    };
   } catch (error) {
     console.error('Agent status error:', error);
-    res.status(500).json({ error: 'Failed to load agent status', details: error.message });
+    throw error;
   }
+}
+
+// ==================== LIVE AGENT MONITOR (WebSocket) ====================
+
+const agentClients = new Set();
+let lastAgentStatusString = '';
+
+agentWss.on('connection', (ws, req) => {
+  agentClients.add(ws);
+  if (cachedAgentStatus) {
+    ws.send(JSON.stringify({ type: 'status_update', data: cachedAgentStatus }));
+  }
+  
+  ws.on('close', () => agentClients.delete(ws));
 });
+
+async function pollAgentStatus() {
+  try {
+    const status = await getAgentStatusData();
+    cachedAgentStatus = status;
+    const statusString = JSON.stringify(status);
+    
+    // Only broadcast if changed to save bandwidth
+    if (statusString !== lastAgentStatusString) {
+      lastAgentStatusString = statusString;
+      const message = JSON.stringify({ type: 'status_update', data: status });
+      agentClients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(message);
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Error polling agent status:', err.message);
+  }
+}
+
+// Poll every 5 seconds
+setInterval(pollAgentStatus, 5000);
+// Initial poll
+pollAgentStatus();
 
 // ==================== FILE SYNC (WebSocket) ====================
 
